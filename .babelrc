@@ -1,0 +1,17 @@
+{
+  "presets": [
+    "flow",
+    "env"
+  ],
+  "plugins": [
+    "syntax-object-rest-spread",
+    "transform-class-properties"
+  ],
+  "env": {
+    "test": {
+      "plugins": [
+        "istanbul"
+      ]
+    }
+  }
+}

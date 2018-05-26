@@ -1,0 +1,4 @@
+--require babel-core/register
+--harmony
+--recursive
+--timeout 60000

@@ -1,0 +1,4 @@
+--compilers js:babel-register
+--harmony
+--recursive
+--timeout 60000
