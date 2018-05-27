@@ -88,7 +88,8 @@ export class HitStrategyFactory {
 
     create(context: ActionContext): DamageStrategy {
         // todo: add elemental king effect = always advantage
-        if (this.roll() <= context.caster.glancing_chance(context.target.element)) {
+        const glancing_chance = ELEMENT_RELATIONS[context.caster.element].weak === context.target.element ? 15 : 0;
+        if (this.roll() <= (glancing_chance + context.caster.glancing_mod)) {
             return new GlancingDamageStrategy(context);
         } else if (this.roll() <= context.target.cr) {
             return new CritDamageStrategy(context);
@@ -110,7 +111,7 @@ export class EnemyDmgSystem implements System {
         this.formula = formula;
     }
 
-    apply(context: ActionContext, step, events: Event[] = []): HitEvent[] {
+    apply(context: ActionContext, step, events: Event[] = []): ?HitEvent[] {
         if (step.enemy_dmg) {
             let config = step.enemy_dmg;
             if (typeof step.enemy_dmg === 'string') {

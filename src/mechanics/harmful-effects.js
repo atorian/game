@@ -76,6 +76,7 @@ type DebufStep = {
     debufs?: DebufConf[]
 }
 
+type DebufEvent = StatDecrease | TemporalEffect;
 
 export class HarmfulEffects implements System {
     resist: ResistPolicy;
@@ -84,7 +85,7 @@ export class HarmfulEffects implements System {
         this.resist = resistPolicy;
     }
 
-    apply(context: ActionContext, step: DebufStep, events?: Event[] = []): StatDecrease | TemporalEffect {
+    apply(context: ActionContext, step: DebufStep, events?: Event[] = []): ?DebufEvent[] {
         if (step.debufs) {
             const last_hit = (events.filter(e => e.name === 'hit').pop(): ?HitEvent);
             if (!last_hit || last_hit.payload.type !== 'glancing') {
@@ -99,7 +100,7 @@ export class HarmfulEffects implements System {
 
                         if (STATS_AFFECTED[debuf.name]) {
                             const d = STATS_AFFECTED[debuf.name];
-                            return {
+                            return [{
                                 name: 'debuffed',
                                 payload: {
                                     target: context.target.id,
@@ -108,27 +109,27 @@ export class HarmfulEffects implements System {
                                     stat: d.stat,
                                     value: d.value(context.target)
                                 }
-                            };
+                            }];
                         }
 
-                        return {
+                        return [{
                             name: 'debuffed',
                             payload: {
                                 target: context.target.id,
                                 effect: debuf.name,
                                 duration: debuf.duration,
                             }
-                        };
+                        }];
                     }
 
-                    return {
+                    return [{
                         name: 'resisted',
                         payload: {
                             target: context.target.id,
                             effect: debuf.name,
                         }
-                    };
-                })
+                    }];
+                });
             }
         }
 

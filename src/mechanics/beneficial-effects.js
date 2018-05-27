@@ -1,123 +1,108 @@
 // @flow
-import type {Contestant, System} from '../battle'
-import type {Target} from ".";
-import {ActionContext} from "../battle";
+import type {Contestant, ActionContext, TemporalEffect, AllyTarget, System, Effect} from '../battle'
 
-type Buf = {
-    name: string,
-    duration: number,
-    target: Target,
+// not target as it's only allowed to target ally
+type Buf = TemporalEffect & {
+    aoe: boolean,
+    target: AllyTarget
 }
 
 function configure(conf): Buf {
     return {
         duration: 1,
-        irresistable: false,
-        target: 'enemy',
+        aoe: false,
+        target: "ally",
         ...conf,
     }
 }
 
 const STATS_AFFECTED = {
-    'def_break': {
+    'def_buf': {
         stat: 'def',
         value(target: Contestant) {
             return target.max_def * 0.7
         }
     },
-    'atk_break': {
+    'atk_buf': {
         stat: 'atk',
         value(target: Contestant) {
             return target.max_atk * 0.5
         }
     },
-    'slow': {
+    'haste': {
         stat: 'spd',
         value(target: Contestant) {
             return target.max_spd * 0.3
         }
     },
-    'glancing': {
-        stat: 'glancing',
+    'anti_crit': {
+        stat: 'incoming_crit_mod',
         value(target: Contestant) {
             return -50;
+        }
+    },
+    'crit_buf': {
+        stat: 'cr',
+        value(target: Contestant) {
+            return 30;
         }
     }
 };
 
-const VALID_DEBUFS = [
-    'def_break',
-    'atk_break',
-    'slow',
-    'glancing',
-    'brand',
-    'block_buf',
-    'unrecoverable',
-    'taunt',
-    'oblivion',
-    'dot',
-    'bomb',
-    'freeze',
-    'stun',
-    'sleep',
-    'silence',
+const VALID_BUFS = [
+    ...Object.keys(STATS_AFFECTED),
+    'immunity',
+    'invincibility',
+    'defend',
+    'endure',
+    'revenge',
+    'recovery',
+    'counter',
+    'soul protect',
+    'reflect',
+    'shield',
+    'rune shield',
 ];
 
-export class HarmfulEffects implements System {
-    resist: ResistPolicy;
+type BufStep = {
+    bufs?: Buf[]
+}
 
-    constructor(resistPolicy: ResistPolicy) {
-        this.resist = resistPolicy;
-    }
+export class BeneficialEffects implements System {
+    apply(context: ActionContext, step: BufStep, events: Event[]): ?Event[] {
+        if (step.bufs) {
+            return [].concat(...step.bufs.map((conf: Effect) => {
+                const buf = configure(conf);
 
-    apply(context: ActionContext, step: any, events: Event[]) {
-        if (step.debufs) {
-            const last_hit = events.filter(e => e.name === 'hit').pop();
-            if (!last_hit || last_hit.payload.type !== 'glancing') {
-                return step.debufs.map((conf: Effect) => {
-                    const debuf = configureDebuf(conf);
+                // todo: process aoe and targeting
 
-                    if (!VALID_DEBUFS.includes(debuf.name)) {
-                        throw new Error(`Unknown Debuf "${debuf.name}"`);
-                    }
+                if (!VALID_BUFS.includes(buf.name)) {
+                    throw new Error(`Unknown Buf "${buf.name}"`);
+                }
 
-                    if (debuf.irresistable || !this.resist(context.caster.acc, context.target.res)) {
-
-                        if (STATS_AFFECTED[debuf.name]) {
-                            const d = STATS_AFFECTED[debuf.name];
-                            return {
-                                name: 'debuffed',
-                                payload: {
-                                    target: context.target.id,
-                                    effect: debuf.name,
-                                    duration: debuf.duration,
-                                    stat: d.stat,
-                                    value: d.value(context.target)
-                                }
-                            };
-                        }
-
-                        return {
-                            name: 'debuffed',
-                            payload: {
-                                target: context.target.id,
-                                effect: debuf.name,
-                                duration: debuf.duration,
-                            }
-                        };
-                    }
-
-                    return {
-                        name: 'resisted',
+                if (STATS_AFFECTED[buf.name]) {
+                    const b = STATS_AFFECTED[buf.name];
+                    return [{
+                        name: 'buffed',
                         payload: {
-                            unit_id: context.target.id,
-                            effect: debuf.name,
+                            target: context.target.id,
+                            effect: buf.name,
+                            duration: buf.duration,
+                            stat: b.stat,
+                            value: b.value(context.target)
                         }
-                    };
-                })
-            }
-        }
+                    }];
+                }
 
-        return [];
+                return [{
+                    name: 'buffed',
+                    payload: {
+                        target: context.target.id,
+                        effect: buf.name,
+                        duration: buf.duration,
+                    }
+                }];
+            }));
+        }
     }
 }

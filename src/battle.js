@@ -1,5 +1,6 @@
 import {EnemyDmgSystem, HitStrategyFactory, Multiplier} from "./mechanics/enemy-damage";
 import {createResistPolicy, HarmfulEffects} from "./mechanics/harmful-effects";
+import {BeneficialEffects} from "./mechanics/beneficial-effects";
 import {ELEMENT_RELATIONS} from "./mechanics";
 import type {Skill} from "./units";
 import _ from 'lodash';
@@ -20,9 +21,7 @@ export type Unit = {
     skills: Skill[],
 }
 
-export type RuneSet = 'Energy' | 'Swift' | 'Fatal'
-    | 'Blade' | 'Rage' | 'Guard' | 'Violent'
-    | 'Shield' | 'Will' | 'Endure' | 'Focus';
+export type RuneSet = 'Energy' | 'Swift' | 'Fatal' | 'Blade' | 'Rage' | 'Guard' | 'Violent' | 'Shield' | 'Will' | 'Endure' | 'Focus';
 
 export type Rune = {
     set: RuneSet,
@@ -83,11 +82,6 @@ function contestant(u: RunedUnit): Contestant {
         atb: 0,
         effects: [],
         glancing_mod: 0,
-        // todo: move chance method to system, leave only modifier in the unit
-        glancing_chance(element) {
-            const chance = ELEMENT_RELATIONS[this.element].weak === element ? 15 : 0;
-            return chance;
-        },
         cooldowns: u.skills.reduce((cooldowns, skill) => {
             return {
                 ...cooldowns,
@@ -111,7 +105,10 @@ type WithSkill = Targeted & {
 }
 type Tick = { [string]: number }
 
-export type Target = 'enemy' | 'self' | 'ally' | 'not_self';
+
+export type EnemyTarget = 'enemy';
+export type AllyTarget = 'self' | 'ally' | 'not_self';
+export type Target = AllyTarget & EnemyTarget ;
 
 export type Event = {
     name: string,
@@ -175,6 +172,7 @@ const eventHandlers = {
     },
     turn_ended(event: any) {
         const deadUnits = Object.values(this.units).filter(u => u.hp === 0);
+        this.unit = null;
         deadUnits.forEach((u) => {
             causes.call(this, {
                 name: 'unit_died',
@@ -226,6 +224,16 @@ const eventHandlers = {
             effects: [...target.effects, event],
             [stat]: target[stat] - value,
         }
+    },
+    buffed(event: TemporalEffect) {
+        const target = this.units[event.target];
+        const {stat, value} = event;
+        // todo: Create EffectsBag class
+        this.units[event.target] = {
+            ...target,
+            effects: [...target.effects, event],
+            [stat]: target[stat] + value,
+        }
     }
 };
 
@@ -274,7 +282,7 @@ export class GuildWarBattle {
         this.mechanics.add(new HarmfulEffects(
             createResistPolicy(roll),
         ));
-        // this.mechanics.add(new BufSystem());
+        this.mechanics.add(new BeneficialEffects());
 
         causes.call(this, {
             name: 'battle_started',
@@ -395,7 +403,6 @@ class SkillSystem {
     }
 }
 
-
 export interface System {
     apply(context: ActionContext, step: any, events: Event[]): Event[];
 }
@@ -409,7 +416,11 @@ class SystemsAggregate {
 
     apply(context: ActionContext, step) {
         return this.systems.reduce((events, system) => {
-            return [...events, ...system.apply(context, step, events)];
+            const new_events = system.apply(context, step, events);
+            if (new_events) {
+                return [...events, ...[].concat(new_events)];
+            }
+            return events;
         }, []);
     }
 }

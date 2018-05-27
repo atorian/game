@@ -57,11 +57,13 @@ export default {
                         value: 30,
                         aoe: true,
                     },
-                    bufs: {
-                        name: 'speed',
-                        duration: 2,
-                        aoe: true,
-                    },
+                    bufs: [
+                        {
+                            name: 'haste',
+                            duration: 2,
+                            aoe: true,
+                        }
+                    ],
                 }
             ]
         }

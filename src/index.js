@@ -5,6 +5,21 @@ import slime from './units/slime';
 import {SymfonyStyle} from 'symfony-style-console';
 import Table from 'cli-table2';
 
+
+process.on('unhandledRejection', (reason, p) => {
+    console.error({
+        message: 'Unhandled Rejection',
+        promise: p,
+        reason,
+    });
+    process.exit();
+});
+
+process.on('uncaughtException', (err) => {
+    console.error(err);
+    process.exit();
+});
+
 type Action = {
     skill: number,
     target: number,
@@ -196,6 +211,7 @@ function renderBattleState(battle: GuildWarBattle, player: Player) {
         io.success(`Action: ${battle.unit.name} uses skill ${action.skill} on ${battle.units[action.target].name}`);
 
         battle.useSkill(currentPlayer.id, action.skill, action.target);
+        console.log(battle.events);
     }
 
     io.section(`Player ${ai.id} team`);

@@ -1,9 +1,11 @@
 import {assert} from 'chai';
-import {HitStrategyFactory} from "../src/battle";
+import {HitStrategyFactory} from "../src/mechanics/enemy-damage";
 
 describe('HitStrategyFactory', () => {
 
-    const strategyFactory = new HitStrategyFactory({});
+    const strategyFactory = new HitStrategyFactory(
+        () => 30,
+    );
 
     it('glancing damage reduced by 30%', () => {
         const caster = {
@@ -25,7 +27,7 @@ describe('HitStrategyFactory', () => {
             additional_chance: 0
         });
 
-        assert.equal(strategy.name, 'glancing_hit');
+        assert.equal(strategy.name, 'glancing');
         assert.equal(strategy.apply(100), 70);
     });
 
@@ -40,7 +42,7 @@ describe('HitStrategyFactory', () => {
             element: 'fire',
         };
 
-        const [type, strategy] = strategy.create({
+        const strategy = strategyFactory.create({
             caster,
             battlefield: [caster, target],
             target,
@@ -49,7 +51,7 @@ describe('HitStrategyFactory', () => {
             additional_chance: 0
         });
 
-        assert.equal(type, 'glancing_hit');
-        assert.equal(strategy(100), 54);
+        assert.equal(strategy.name, 'glancing');
+        assert.equal(strategy.apply(100), 54);
     });
 });
