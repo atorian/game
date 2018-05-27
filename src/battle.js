@@ -1,35 +1,9 @@
-import {EnemyDmgSystem, HitStrategyFactory, Multiplier, ELEMENT_RELATIONS} from "./mechanics/single-target-damage";
+import {EnemyDmgSystem, HitStrategyFactory, Multiplier} from "./mechanics/enemy-damage";
+import {createResistPolicy, HarmfulEffects} from "./mechanics/harmful-effects";
+import {ELEMENT_RELATIONS} from "./mechanics";
 import type {Skill} from "./units";
 import _ from 'lodash';
-import {createResistPolicy, HarmfulEffects} from "./mechanics/harmful-effects";
 
-function contestant(u: RunedUnit): Contestant {
-    return {
-        ...u,
-        hp: u.max_hp,
-        atk: u.max_atk,
-        def: u.max_def,
-        spd: u.max_spd,
-        cr: u.max_cr,
-        cd: u.max_cd,
-        res: u.max_res,
-        acc: u.max_acc,
-        atb: 0,
-        effects: [],
-        glancing_chance(element) {
-            console.log(element);
-            const chance = ELEMENT_RELATIONS[this.element].weak === element ? 15 : 0;
-            console.log('chance', chance);
-            return chance;
-        },
-        cooldowns: u.skills.reduce((cooldowns, skill) => {
-            return {
-                ...cooldowns,
-                [skill.id]: 0,
-            }
-        }, {})
-    }
-}
 
 
 export type Unit = {
@@ -46,16 +20,30 @@ export type Unit = {
     skills: Skill[],
 }
 
-export type RuneSet = 'Energy' | 'Swift' | 'Fatal' | 'Blade' | 'Rage' | 'Guard' | 'Violent' | 'Shield' | 'Will';
+export type RuneSet = 'Energy' | 'Swift' | 'Fatal'
+    | 'Blade' | 'Rage' | 'Guard' | 'Violent'
+    | 'Shield' | 'Will' | 'Endure' | 'Focus';
+
 export type Rune = {
     set: RuneSet,
+    hp: number,
+    atk: number,
+    def: number,
+    spd: number,
     'hp%': number,
     'atk%': number,
+    'def%': number,
+    cr: number,
+    cd: number,
+    acc: number,
+    res: number,
     slot: 1 | 2 | 3 | 4 | 5 | 6
 }
 
+type UnitId = string;
+
 export type RunedUnit = Unit & {
-    id: string,
+    id: UnitId,
     max_hp: number,
     max_atk: number,
     max_def: number,
@@ -77,34 +65,86 @@ export type Contestant = RunedUnit & {
     cd: number,
     res: number,
     acc: number,
-    glancing_chance: (element: string) => boolean
+    glancing_mod: number,
+    glancing_chance: (element: string) => number
 }
 
-type BattleStartedEvent = {
-    name: 'battle_started',
-    payload: {
-        teamA: RunedUnit[],
-        teamB: RunedUnit[],
+function contestant(u: RunedUnit): Contestant {
+    return {
+        ...u,
+        hp: u.max_hp,
+        atk: u.max_atk,
+        def: u.max_def,
+        spd: u.max_spd,
+        cr: u.max_cr,
+        cd: u.max_cd,
+        res: u.max_res,
+        acc: u.max_acc,
+        atb: 0,
+        effects: [],
+        glancing_mod: 0,
+        // todo: move chance method to system, leave only modifier in the unit
+        glancing_chance(element) {
+            const chance = ELEMENT_RELATIONS[this.element].weak === element ? 15 : 0;
+            return chance;
+        },
+        cooldowns: u.skills.reduce((cooldowns, skill) => {
+            return {
+                ...cooldowns,
+                [skill.id]: 0,
+            }
+        }, {})
     }
 }
 
-type TurnStartedEvent = {
-    name: 'turn_started',
-    payload: {
-        unit_id: string
-    }
+
+type BattleStarted = {
+    teamA: RunedUnit[],
+    teamB: RunedUnit[],
 }
 
-type TickEvent = {
-    name: 'turn_started',
-    payload: { [string]: number }
+type Targeted = {
+    target: UnitId
+}
+type WithSkill = Targeted & {
+    skill_id: string
+}
+type Tick = { [string]: number }
+
+export type Target = 'enemy' | 'self' | 'ally' | 'not_self';
+
+export type Event = {
+    name: string,
+    payload: any,
+}
+
+export type Effect = Targeted & {
+    effect: string,
+}
+
+export type TemporalEffect = Effect & {
+    duration: number,
+}
+
+export type StatDecrease = TemporalEffect & {
+    stat: string,
+    value: number,
+}
+
+export type HitEvent = Event & {
+    payload: Hit
+}
+
+export type Hit = Targeted & {
+    type: 'normal' | 'critical' | 'glancing' | 'crushing',
+    damage: number,
 }
 
 const eventHandlers = {
-    battle_started(event: BattleStartedEvent) {
+    battle_started(event: BattleStarted) {
         this.units = [
-            ...event.payload.teamA.map(contestant),
-            ...event.payload.teamB.map(contestant)
+            ...event.teamA.map(contestant),
+            ...event.teamB.map(contestant)
         ].reduce((map, u) => {
             return {
                 ...map,
@@ -112,47 +152,44 @@ const eventHandlers = {
             }
         }, {});
     },
-    tick(event: TickEvent) {
+    tick(event: Tick) {
         this.units = Object.values(this.units).reduce(
             (units, unit) => {
                 return {
                     ...units,
                     [unit.id]: {
                         ...unit,
-                        atb: unit.atb + event.payload[unit.id]
+                        atb: unit.atb + event[unit.id]
                     }
                 }
             },
             {}
         );
     },
-    turn_started(event: TurnStartedEvent) {
-        const {unit_id} = event.payload;
-
-        const unit = this.units[unit_id];
-
-        this.unit = this.units[unit_id] = {
+    turn_started(event: Targeted) {
+        const unit = this.units[event.target];
+        this.unit = this.units[event.target] = {
             ...unit,
             atb: 0
         };
     },
-    turn_ended(event) {
+    turn_ended(event: any) {
         const deadUnits = Object.values(this.units).filter(u => u.hp === 0);
         deadUnits.forEach((u) => {
             causes.call(this, {
                 name: 'unit_died',
                 payload: {
-                    unit_id: u.id,
+                    target: u.id,
                 }
             })
         });
     },
-    unit_died(event) {
+    unit_died(event: Targeted) {
         const players = Object.values(this.units)
             .filter(u => u.hp > 0)
             .map(u => u.player);
 
-        this.units[event.payload.unit_id].atb = 0;
+        this.units[event.target].atb = 0;
 
         if (_.uniq(players).length === 1) {
             causes.call(this, {
@@ -164,35 +201,38 @@ const eventHandlers = {
         }
     },
     battle_ended(event) {
-        this.winner = event.payload.winner;
+        this.winner = event.winner;
     },
-    skill_used(event) {
+    skill_used(event: WithSkill) {
         // skill_id
-        const {unit_id, skill_id} = event.payload;
-        this.units[unit_id].cooldowns[skill_id] = this.units[unit_id].skills.find(s => s.id == skill_id).cooltime;
+        const {unit_id: target, skill_id} = event;
+        this.units[target].cooldowns[skill_id] = this.units[target].skills
+            .find(s => s.id === skill_id)
+            .cooltime;
     },
-    hit(event) {
-        const target = this.units[event.payload.target];
-        this.units[event.payload.target] = {
+    hit(event: Hit) {
+        const target = this.units[event.target];
+        this.units[event.target] = {
             ...target,
-            hp: Math.max(0, target.hp - event.payload.damage),
+            hp: Math.max(0, target.hp - event.damage),
         }
     },
-    debuffed(event) {
-        const target = this.units[event.payload.target];
-        const {stat, value} = event.payload;
-        this.units[event.payload.target] = {
+    debuffed(event: TemporalEffect) {
+        const target = this.units[event.target];
+        const {stat, value} = event;
+        // todo: Create EffectsBag class
+        this.units[event.target] = {
             ...target,
-            effects: [...target.effects, event.payload],
+            effects: [...target.effects, event],
             [stat]: target[stat] - value,
         }
     }
 };
 
-function when(event) {
+function when(event: Event) {
     const handler = eventHandlers[event.name];
     if (handler) {
-        handler.call(this, event);
+        handler.call(this, event.payload);
     } else {
         console.warn(`Can not handle event: ${event.name}`);
     }
@@ -200,7 +240,7 @@ function when(event) {
 
 function causes(event) {
     this.events.push(event);
-    // this.mechanics.apply(m => m.handle(event));
+    // todo: this.mechanics.apply(m => m.handle(event));
     this.applyEvent(event);
 }
 
@@ -214,6 +254,10 @@ function byReadiness(uA: Contestant, uB: Contestant) {
     return uA.atb - uB.atb;
 }
 
+function roll() {
+    return _.random(1, 100);
+}
+
 export class GuildWarBattle {
     units: Contestant[];
     unit: Contestant;
@@ -222,7 +266,6 @@ export class GuildWarBattle {
     constructor(teamA: RunedUnit[], teamB: RunedUnit[]) {
         this.events = [];
         this.version = 0;
-        const roll = () => _.random(1, 100);
         this.mechanics = new SkillSystem();
         this.mechanics.add(new EnemyDmgSystem(
             new HitStrategyFactory(roll),
@@ -231,7 +274,6 @@ export class GuildWarBattle {
         this.mechanics.add(new HarmfulEffects(
             createResistPolicy(roll),
         ));
-        // this.mechanics.add(new DefBreakSystem());
         // this.mechanics.add(new BufSystem());
 
         causes.call(this, {
@@ -254,8 +296,7 @@ export class GuildWarBattle {
 
     next() {
 
-        do {
-
+        while (!this.unit) {
             causes.call(this, {
                 name: 'tick',
                 payload: Object.values(this.units)
@@ -277,22 +318,22 @@ export class GuildWarBattle {
                 causes.call(this, {
                     name: 'turn_started',
                     payload: {
-                        unit_id: nextUnit.id,
+                        target: nextUnit.id,
                     }
                 })
             }
-
-        } while (!this.unit);
+        }
     }
 
     useSkill(player, skill_id, target_id) {
+        // todo: validate target
         if (this.unit.player !== player) {
             throw new Error('Cheater!!!');
         }
 
         causes.call(this, {
             name: 'skill_used',
-            payload:{
+            payload: {
                 unit_id: this.unit.id,
                 skill_id,
             }
@@ -312,7 +353,7 @@ export class GuildWarBattle {
 
         causes.call(this, {
             name: 'turn_ended',
-            payload:{
+            payload: {
                 unit_id: this.unit.id,
             }
         });
@@ -354,10 +395,6 @@ class SkillSystem {
     }
 }
 
-type Event = {
-    name: string,
-    payload: { [string]: any },
-}
 
 export interface System {
     apply(context: ActionContext, step: any, events: Event[]): Event[];

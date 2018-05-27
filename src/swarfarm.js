@@ -146,11 +146,11 @@ const skill2 = {
     "level_progress_description": [
         "Damage +5%",
         "Damage +5%",
-        "Effect Rate +10%",
+        "DebufConf Rate +10%",
         "Damage +10%",
-        "Effect Rate +10%",
+        "DebufConf Rate +10%",
         "Damage +10%",
-        "Effect Rate +15%"
+        "DebufConf Rate +15%"
     ],
     "effects": [
         {

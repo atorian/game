@@ -1,24 +1,12 @@
 import {random} from 'lodash';
-import {ActionContext, Contestant} from "../battle";
-
-export const ELEMENT_RELATIONS = {
-    fire: {weak: 'water', strong: 'wind'},
-    water: {weak: 'wind', strong: 'fire'},
-    wind: {weak: 'fire', strong: 'water'},
-    light: {weak: null, strong: 'dark'},
-    dark: {weak: null, strong: 'light'},
-};
+import {ActionContext, Contestant, System} from "../battle";
+import type {HitEvent} from "../battle";
+import {ELEMENT_RELATIONS} from "./index";
 
 export class Multiplier {
     evaluate(raw: string, context: ActionContext): number {
         const {caster: self, target} = context;
         return eval(raw);
-    }
-}
-
-export class InvalidDmgSystem implements System {
-    apply(context: ActionContext, step, events: Event[] = []): Event[] {
-        throw new Error(`Can not handle dmg from step ${JSON.stringify(step)}`)
     }
 }
 
@@ -32,7 +20,6 @@ function hasAdvantage(caster: Contestant, target: Contestant): boolean {
 
 interface DamageStrategy {
     name: string;
-
     apply(raw_dmg: number): number;
 }
 
@@ -101,7 +88,6 @@ export class HitStrategyFactory {
 
     create(context: ActionContext): DamageStrategy {
         // todo: add elemental king effect = always advantage
-        console.log(context.target);
         if (this.roll() <= context.caster.glancing_chance(context.target.element)) {
             return new GlancingDamageStrategy(context);
         } else if (this.roll() <= context.target.cr) {
@@ -124,7 +110,7 @@ export class EnemyDmgSystem implements System {
         this.formula = formula;
     }
 
-    apply(context: ActionContext, step, events: Event[] = []): Event[] {
+    apply(context: ActionContext, step, events: Event[] = []): HitEvent[] {
         if (step.enemy_dmg) {
             let config = step.enemy_dmg;
             if (typeof step.enemy_dmg === 'string') {
@@ -136,6 +122,8 @@ export class EnemyDmgSystem implements System {
             const raw_dmg = this.formula.evaluate(config.multiplier, context);
             const ignore_def = config.ignore_def || false;
             const aoe = config.aoe || false;
+
+            // todo: add aoe support
 
             const strategy = this.hit_strategy_factory.create(context);
 

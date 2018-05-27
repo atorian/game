@@ -153,24 +153,23 @@ const DEBUFS = {
 };
 
 function effect(e) {
-    if (DEBUFS[e.name] !== undefined) {
-        return `<fg=red>${DEBUFS[e.name]}[e.duration]</>`;
+    if (DEBUFS[e.effect] !== undefined) {
+        return `${DEBUFS[e.effect]}-[${e.duration}]`;
     }
-    return `<fg=green>${DEBUFS[e.name]}[e.duration]</>`;
+    return `${BUFS[e.effect]}+[${e.duration}]`;
 }
 
 function renderBattleState(battle: GuildWarBattle, player: Player) {
     const units = Object.values(battle.units).filter(u => u.player === player.id);
     const state = new Table({
         head: units.map(u => u.name),
-        colWidths: new Array(units.length).fill(20),
+        colWidths: new Array(units.length).fill(50),
     });
 
     state.push(
         units.map(u => u.hp / u.max_hp * 100),
         units.map(u => Math.min(u.atb, 100).toFixed(0)),
-        units.map(u => u.effects.map(e => effect(e))),
-        // todo: add bufs / debufs here
+        units.map(u => u.effects.map(e => effect(e)).join(',')),
     );
 
     return state.toString();

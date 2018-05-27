@@ -1,23 +1,15 @@
 // @flow
-import type {Contestant, HitEvent, StatDecrease, System, TemporalEffect, Target} from '../battle'
+import type {Contestant, System} from '../battle'
+import type {Target} from ".";
 import {ActionContext} from "../battle";
 
-type ResistPolicy = (acc: number, res: number) => boolean;
-
-export function createResistPolicy(roll): ResistPolicy {
-    return (acc: number, res: number): boolean => {
-        return roll() <= Math.max(res - acc, 15);
-    }
-}
-
-type DebufConf = {
+type Buf = {
     name: string,
     duration: number,
-    irresistable: boolean,
     target: Target,
 }
 
-function configure(conf: any): DebufConf {
+function configure(conf): Buf {
     return {
         duration: 1,
         irresistable: false,
@@ -71,12 +63,6 @@ const VALID_DEBUFS = [
     'silence',
 ];
 
-
-type DebufStep = {
-    debufs?: DebufConf[]
-}
-
-
 export class HarmfulEffects implements System {
     resist: ResistPolicy;
 
@@ -84,12 +70,12 @@ export class HarmfulEffects implements System {
         this.resist = resistPolicy;
     }
 
-    apply(context: ActionContext, step: DebufStep, events?: Event[] = []): StatDecrease | TemporalEffect {
+    apply(context: ActionContext, step: any, events: Event[]) {
         if (step.debufs) {
-            const last_hit = (events.filter(e => e.name === 'hit').pop(): ?HitEvent);
+            const last_hit = events.filter(e => e.name === 'hit').pop();
             if (!last_hit || last_hit.payload.type !== 'glancing') {
-                return step.debufs.map((conf: DebufConf) => {
-                    const debuf = configure(conf);
+                return step.debufs.map((conf: Effect) => {
+                    const debuf = configureDebuf(conf);
 
                     if (!VALID_DEBUFS.includes(debuf.name)) {
                         throw new Error(`Unknown Debuf "${debuf.name}"`);
@@ -124,7 +110,7 @@ export class HarmfulEffects implements System {
                     return {
                         name: 'resisted',
                         payload: {
-                            target: context.target.id,
+                            unit_id: context.target.id,
                             effect: debuf.name,
                         }
                     };
