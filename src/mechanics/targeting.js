@@ -1,7 +1,7 @@
 import type {ActionContext} from "../battle";
 
 
-export function single_enemy(context:ActionContext) {
+export function enemy(context:ActionContext) {
     if (context.caster.player !== context.target.player) {
         return [context.target];
     }
@@ -44,4 +44,36 @@ export function not_self(context:ActionContext) {
     }
 
     throw new Error('Invalid target');
+}
+
+
+const STRATEGIES = {
+    enemy,
+    aoe_enemy,
+    self,
+    ally,
+    aoe_ally,
+    not_self,
+};
+
+export function create(strategy) {
+    console.log('strategy', strategy);
+    switch(typeof strategy) {
+        case 'string':
+            if (STRATEGIES[strategy]) {
+                console.log(strategy, STRATEGIES[strategy]);
+                return STRATEGIES[strategy];
+            }
+            throw new Error(`Unknown targeting strategy "${strategy}"`);
+        case 'function':
+            return strategy;
+        default:
+            throw new Error(
+                `Targeting strategy could be string or function. ${typeof strategy} given.`
+            );
+    }
+}
+
+export default function(strategy, context:ActionContext) {
+    return create(strategy)(context);
 }

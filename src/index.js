@@ -89,6 +89,21 @@ const target_strategies = {
             return unit.player === battle.unit.player;
         }
     },
+    aoe_ally(battle) {
+        return (unit) => {
+            return unit.player === battle.unit.player;
+        }
+    },
+    self(battle) {
+        return (unit) => {
+            return unit.id === battle.unit.id;
+        }
+    },
+    not_self(battle) {
+        return (unit) => {
+            return battle.unit.player === unit.player &&  unit.id !== battle.unit.id;
+        }
+    },
     enemy(battle) {
         return (unit) => {
             return unit.player !== battle.unit.player;
@@ -112,6 +127,7 @@ const player: Player = {
 
         const skill_idx = await io.choice('Select skill', skillChoices);
         const skill = skills[skill_idx - 1];
+
 
         const valid_targets = Object.values(battle.units).filter(
             target_strategies[skill.target](battle)
@@ -154,7 +170,7 @@ const battle = new GuildWarBattle(
 const BUFS = {
     'def_buf': 'D',
     'atk_buf': 'A',
-    'speed_buf': 'S',
+    'haste': 'S',
     'hot': 'X',
     'anti_crit': 'C',
 };

@@ -105,7 +105,7 @@ type WithSkill = Targeted & {
 type Tick = { [string]: number }
 
 
-export type EnemyTarget = 'single_enemy' | 'aoe_enemy';
+export type EnemyTarget = 'enemy' | 'aoe_enemy';
 export type AllyTarget = 'self' | 'ally' | 'aoe_ally' | 'not_self';
 export type Target = AllyTarget & EnemyTarget ;
 

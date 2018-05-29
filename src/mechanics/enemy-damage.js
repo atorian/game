@@ -2,6 +2,7 @@ import {random} from 'lodash';
 import {ActionContext, Contestant, System} from "../battle";
 import type {HitEvent} from "../battle";
 import {ELEMENT_RELATIONS} from "./index";
+import target from './targeting';
 
 export class Multiplier {
     evaluate(raw: string, context: ActionContext): number {
@@ -105,13 +106,23 @@ type HitConfig = {
 
 }
 
-function configure(conf: any): HitConfig {
+function configure(conf: string | Object): HitConfig {
+    if (typeof conf === 'string') {
+        return {
+            target: 'enemy',
+            multiplier: conf,
+            ignore_def: false,
+            ...conf,
+        }
+    }
+
     if (!conf.multiplier) {
         throw new Error('Damage must have multiplier');
     }
 
     return {
         target: 'enemy',
+        ignore_def: false,
         ...conf,
     }
 }
@@ -128,32 +139,42 @@ export class EnemyDmgSystem implements System {
 
     apply(context: ActionContext, step, events: Event[] = []): ?HitEvent[] {
         if (step.enemy_dmg) {
-            let config = step.enemy_dmg;
-            if (typeof step.enemy_dmg === 'string') {
-                config = {
-                    multiplier: step.enemy_dmg,
-                };
-            }
+            let config = configure(step.enemy_dmg);
 
             const raw_dmg = this.formula.evaluate(config.multiplier, context);
-            const ignore_def = config.ignore_def || false;
 
-            // todo: add aoe support
+            return target(config.target, context).map(target => {
 
-            const strategy = this.hit_strategy_factory.create(context);
+                const strategy = this.hit_strategy_factory.create({
+                    ...context,
+                    target,
+                });
 
-            const multiplied_dmg = strategy.apply(raw_dmg);
-            // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
-            return [{
-                name: 'hit',
-                payload: {
-                    target: context.target.id,
-                    type: strategy.name,
-                    damage: Math.floor(
-                        multiplied_dmg - (ignore_def ? 0 : 1000 / (1140 + 3.5 * context.target.def))
-                    ),
-                }
-            }];
+                const multiplied_dmg = strategy.apply(raw_dmg);
+                // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
+
+                return {
+                    name: 'hit',
+                    payload: {
+                        target: target.id,
+                        type: strategy.name,
+                        damage: Math.floor(
+                            multiplied_dmg - (config.ignore_def ? 0 : 1000 / (1140 + 3.5 * target.def))
+                        ),
+                    }
+                };
+            });
+
+            // return [{
+            //     name: 'hit',
+            //     payload: {
+            //         target: context.target.id,
+            //         type: strategy.name,
+            //         damage: Math.floor(
+            //             multiplied_dmg - (ignore_def ? 0 : 1000 / (1140 + 3.5 * context.target.def))
+            //         ),
+            //     }
+            // }];
         }
     }
 }
