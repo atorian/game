@@ -1,7 +1,6 @@
 import {EnemyDmgSystem, HitStrategyFactory, Multiplier} from "./mechanics/enemy-damage";
 import {createResistPolicy, HarmfulEffects} from "./mechanics/harmful-effects";
 import {BeneficialEffects} from "./mechanics/beneficial-effects";
-import {ELEMENT_RELATIONS} from "./mechanics";
 import type {Skill} from "./units";
 import _ from 'lodash';
 
@@ -43,6 +42,7 @@ type UnitId = string;
 
 export type RunedUnit = Unit & {
     id: UnitId,
+    player: string,
     max_hp: number,
     max_atk: number,
     max_def: number,
@@ -65,7 +65,6 @@ export type Contestant = RunedUnit & {
     res: number,
     acc: number,
     glancing_mod: number,
-    glancing_chance: (element: string) => number
 }
 
 function contestant(u: RunedUnit): Contestant {
@@ -106,8 +105,8 @@ type WithSkill = Targeted & {
 type Tick = { [string]: number }
 
 
-export type EnemyTarget = 'enemy';
-export type AllyTarget = 'self' | 'ally' | 'not_self';
+export type EnemyTarget = 'single_enemy' | 'aoe_enemy';
+export type AllyTarget = 'self' | 'ally' | 'aoe_ally' | 'not_self';
 export type Target = AllyTarget & EnemyTarget ;
 
 export type Event = {

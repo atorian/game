@@ -101,6 +101,21 @@ export class HitStrategyFactory {
     }
 }
 
+type HitConfig = {
+
+}
+
+function configure(conf: any): HitConfig {
+    if (!conf.multiplier) {
+        throw new Error('Damage must have multiplier');
+    }
+
+    return {
+        target: 'enemy',
+        ...conf,
+    }
+}
+
 // SYSTEM
 export class EnemyDmgSystem implements System {
     hit_strategy_factory: HitStrategyFactory;
@@ -122,7 +137,6 @@ export class EnemyDmgSystem implements System {
 
             const raw_dmg = this.formula.evaluate(config.multiplier, context);
             const ignore_def = config.ignore_def || false;
-            const aoe = config.aoe || false;
 
             // todo: add aoe support
 

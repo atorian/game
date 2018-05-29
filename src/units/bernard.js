@@ -30,7 +30,7 @@ export default {
                 {
                     enemy_dmg: {
                         multiplier: 'self.atk * 5.10',
-                        aoe: false,
+                        target: 'enemy',
                         ignore_def: false,
                         ignore_bufs: false,
                     },
@@ -50,7 +50,7 @@ export default {
         {
             id: 'Tailwind',
             cooltime: 3,
-            target: 'ally', // 'self' | 'enemy' | 'ally' | 'not_self',
+            target: 'aoe_ally',
             iterations: [
                 {
                     atb_boost: {
