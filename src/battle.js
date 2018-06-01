@@ -6,7 +6,6 @@ import _ from 'lodash';
 import {AtbManipulation} from "./mechanics/atb-effects";
 
 
-
 export type Unit = {
     name: string,
     element: 'water' | 'fire' | 'wind' | 'light' | 'dark',
@@ -21,7 +20,18 @@ export type Unit = {
     skills: Skill[],
 }
 
-export type RuneSet = 'Energy' | 'Swift' | 'Fatal' | 'Blade' | 'Rage' | 'Guard' | 'Violent' | 'Shield' | 'Will' | 'Endure' | 'Focus';
+export type RuneSet =
+    'Energy'
+    | 'Swift'
+    | 'Fatal'
+    | 'Blade'
+    | 'Rage'
+    | 'Guard'
+    | 'Violent'
+    | 'Shield'
+    | 'Will'
+    | 'Endure'
+    | 'Focus';
 
 export type Rune = {
     set: RuneSet,
@@ -66,6 +76,7 @@ export type Contestant = RunedUnit & {
     res: number,
     acc: number,
     glancing_mod: number,
+    cooldowns: { [string]: number }
 }
 
 function contestant(u: RunedUnit): Contestant {
@@ -174,7 +185,14 @@ const eventHandlers = {
         const unit = this.units[event.target];
         this.unit = this.units[event.target] = {
             ...unit,
-            atb: 0
+            atb: 0,
+            // todo: add check for inability effects
+            cooldowns: unit.skills.reduce((cooldowns, skill) => {
+                return {
+                    ...cooldowns,
+                    [skill.id]: Math.max(0, unit.cooldowns[skill.id]--),
+                }
+            }, {})
         };
     },
     turn_ended(event: any) {

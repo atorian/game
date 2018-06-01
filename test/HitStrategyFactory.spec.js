@@ -1,5 +1,6 @@
 import {assert} from 'chai';
 import {HitStrategyFactory} from "../src/mechanics/enemy-damage";
+import bernard from '../src/units/bernard';
 
 describe('HitStrategyFactory', () => {
 
@@ -9,10 +10,8 @@ describe('HitStrategyFactory', () => {
 
     it('glancing damage reduced by 30%', () => {
         const caster = {
-            element: 'wind',
-            glancing_chance() {
-                return 100;
-            },
+            ...bernard,
+            glancing_mod: 100,
         };
         const target = {
             element: 'wind',
@@ -22,7 +21,7 @@ describe('HitStrategyFactory', () => {
             caster,
             battlefield: [caster, target],
             target,
-            // skill: Skill, // todo: add skill here
+            skill: caster.skills[0], // todo: add skill here
             additional_dmg: 0,
             additional_chance: 0
         });

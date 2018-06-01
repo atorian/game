@@ -101,7 +101,7 @@ const target_strategies = {
     },
     not_self(battle) {
         return (unit) => {
-            return battle.unit.player === unit.player &&  unit.id !== battle.unit.id;
+            return battle.unit.player === unit.player && unit.id !== battle.unit.id;
         }
     },
     enemy(battle) {
@@ -118,12 +118,13 @@ const player: Player = {
 
         io.section(`Current Unit ${battle.unit.name} of player ${battle.unit.player}`);
 
-        const skillChoices = Object.keys(skills).reduce((choices, skill_idx) => {
-            return {
-                ...choices,
-                [1 + 1 * skill_idx]: format_skill_description(skills[skill_idx]),
-            }
-        }, {});
+        const skillChoices = Object.keys(skills.filter(s => battle.unit.cooldowns[s.id] === 0))
+            .reduce((choices, skill_idx) => {
+                return {
+                    ...choices,
+                    [1 + 1 * skill_idx]: format_skill_description(skills[skill_idx]),
+                }
+            }, {});
 
         const skill_idx = await io.choice('Select skill', skillChoices);
         const skill = skills[skill_idx - 1];

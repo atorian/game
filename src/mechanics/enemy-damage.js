@@ -46,7 +46,7 @@ class CritDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + (this.context.additional_dmg + this.context.caster.cd) / 100);
+        return raw_dmg * (1 + (this.context.skill.additional_dmg + this.context.caster.cd) / 100);
     }
 }
 
@@ -59,7 +59,7 @@ class CrushingDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + this.context.additional_dmg / 100 + 0.3);
+        return raw_dmg * (1 + this.context.skill.additional_dmg / 100 + 0.3);
     }
 }
 
@@ -72,7 +72,7 @@ class NormalDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + this.context.additional_dmg / 100);
+        return raw_dmg * (1 + this.context.skill.additional_dmg / 100);
     }
 }
 
