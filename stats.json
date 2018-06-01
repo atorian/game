@@ -1,0 +1,42 @@
+{
+  "bernie": {
+    "hp": 0,
+    "atk": 0,
+    "def": 0,
+    "spd": 50,
+    "cr": 0,
+    "cd": 0,
+    "res": 0,
+    "acc": 0
+  },
+  "megan":{
+    "hp": 0,
+    "atk": 0,
+    "def": 0,
+    "spd": 20,
+    "cr": 0,
+    "cd": 0,
+    "res": 0,
+    "acc": 0
+  },
+  "lushen1":{
+    "hp": 0,
+    "atk": 1500,
+    "def": 0,
+    "spd": 5,
+    "cr": 70,
+    "cd": 100,
+    "res": 0,
+    "acc": 0
+  },
+  "lushen2":{
+    "hp": 0,
+    "atk": 0,
+    "def": 0,
+    "spd": 0,
+    "cr": 0,
+    "cd": 0,
+    "res": 0,
+    "acc": 0
+  }
+}

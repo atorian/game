@@ -6,6 +6,8 @@ import {SymfonyStyle} from 'symfony-style-console';
 import Table from 'cli-table2';
 import lushen from "./units/lushen";
 import megan from "./units/megan";
+const extra_stats = require('../stats.json');
+import _ from 'lodash';
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -33,15 +35,18 @@ interface Player {
     requestAction(skills: Ability[], battle: GuildWarBattle): Action;
 }
 
-class Unit {
-    // todo: add skill ups ?
-    constructor(id, owner: Player, base: BaseUnit, runes = []) {
-        this.base = base;
-        this.runes = runes;
-    }
+type Stats = {
+    hp?: number,
+    atk?: number,
+    def?: number,
+    spd?: number,
+    cr?: number,
+    cd?: number,
+    res?: number,
+    acc?: number,
 }
 
-function createUnit(id, base, player_id) {
+function createUnit(id, base, player_id, bonus_stats: Stats[] = []) {
     const stats = ['hp', 'atk', 'def', 'spd', 'cr', 'cd', 'res', 'acc'];
     const base_stats = stats.reduce((baseStats, name) => {
         return {
@@ -60,10 +65,10 @@ function createUnit(id, base, player_id) {
         // declare base stats
         ...base_stats,
         // todo: add runes stats calculations here
-        ...stats.reduce((baseStats, name) => {
+        ...stats.reduce((maxStats, name) => {
             return {
-                ...baseStats,
-                [`max_${name}`]: base[name],
+                ...maxStats,
+                [`max_${name}`]: base[name] + _.sumBy(bonus_stats, s => s[name] || 0),
             }
         }, {}),
     }
@@ -174,12 +179,13 @@ const players = {
     [ai.id]: ai,
 };
 
+
 const battle = new GuildWarBattle(
     [
-        createUnit(1, bernard, player.id),
-        createUnit(4, megan, player.id),
-        // createUnit(2, lushen, player.id),
-        // createUnit(3, lushen, player.id),
+        createUnit('bernie', bernard, player.id, [extra_stats['bernie']]),
+        createUnit('megan', megan, player.id, [extra_stats['megan']]),
+        createUnit('lushen1', lushen, player.id, [extra_stats['lushen1']]),
+        createUnit('lushen2', lushen, player.id, [extra_stats['lushen2']]),
     ],
     [createUnit(5, slime, ai.id)]
 );
@@ -211,7 +217,7 @@ function renderBattleState(battle: GuildWarBattle, player: Player) {
     const units = Object.values(battle.units).filter(u => u.player === player.id);
     const state = new Table({
         head: units.map(u => u.name),
-        colWidths: new Array(units.length).fill(50),
+        colWidths: new Array(units.length).fill(30),
     });
 
     state.push(

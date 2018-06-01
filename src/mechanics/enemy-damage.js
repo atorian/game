@@ -92,7 +92,7 @@ export class HitStrategyFactory {
         const glancing_chance = ELEMENT_RELATIONS[context.caster.element].weak === context.target.element ? 15 : 0;
         if (this.roll() <= (glancing_chance + context.caster.glancing_mod)) {
             return new GlancingDamageStrategy(context);
-        } else if (this.roll() <= context.target.cr) {
+        } else if (this.roll() <= context.caster.cr) {
             return new CritDamageStrategy(context);
         } else if (hasAdvantage(context.caster, context.target) && this.roll() <= 15) {
             return new CrushingDamageStrategy(context);
