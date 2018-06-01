@@ -46,11 +46,6 @@ class CritDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        console.log(
-            raw_dmg,
-            (100 + (this.context.skill.additional_dmg + this.context.caster.cd)) / 100
-        );
-
         return raw_dmg * (1 + (this.context.skill.additional_dmg + this.context.caster.cd) / 100);
     }
 }
