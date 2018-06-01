@@ -186,7 +186,7 @@ const eventHandlers = {
         this.unit = this.units[event.target] = {
             ...unit,
             atb: 0,
-            // todo: add check for inability effects
+            // todo: add check for inability effects, extract to other event?
             cooldowns: unit.skills.reduce((cooldowns, skill) => {
                 return {
                     ...cooldowns,
@@ -370,6 +370,10 @@ export class GuildWarBattle {
     useSkill(player, skill_id, target_id) {
         // todo: validate target
         if (this.unit.player !== player) {
+            throw new Error('Cheater!!!');
+        }
+
+        if (this.unit.cooldowns[skill_id] !== 0) {
             throw new Error('Cheater!!!');
         }
 
