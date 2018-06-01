@@ -33,6 +33,7 @@ export default {
                 {
                     enemy_dmg: 'self.atk * 1.3',
                     atb_boost: {
+                        target: 'self',
                         condition: 'is_crit',
                         value: 15,
                     }

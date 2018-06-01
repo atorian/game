@@ -199,7 +199,53 @@ const eventHandlers = {
             }, {})
         };
     },
+    effect_duration_reduced({target, effect, duration}) {
+        const effects = this.units[target].effects;
+        const tmpEffect = effects.find(e => e.effect === effect);
+        effects[effects.indexOf(tmpEffect)] = {
+            ...tmpEffect,
+            duration,
+        };
+
+        this.units[target] = {
+            ...this.units[target],
+            effects,
+        };
+    },
+    effect_removed({target, effect}) {
+        const effects = this.units[target].effects;
+        this.units[target] = {
+            ...this.units[target],
+            // fixme: this will remove all dots, should remove just 1
+            effects: effects.filter(e => e.effect !== effect)
+        };
+    },
     turn_ended(event: any) {
+
+        this.unit.effects.forEach((e:Effect|TemporalEffect) => {
+            if (e.duration) {
+                if (e.duration > 1) {
+                    causes.call(this, {
+                        name: 'effect_duration_reduced',
+                        payload: {
+                            target: this.unit.id,
+                            effect: e.effect,
+                            duration: e.duration - 1,
+                        }
+                    });
+                } else {
+                    causes.call(this, {
+                        name: 'effect_removed',
+                        payload: {
+                            target: this.unit.id,
+                            effect: e.effect,
+                        }
+                    });
+                }
+            }
+        });
+
+
         const deadUnits = Object.values(this.units).filter(u => u.hp === 0);
         this.unit = null;
         deadUnits.forEach((u) => {
@@ -210,6 +256,7 @@ const eventHandlers = {
                 }
             })
         });
+
     },
     unit_died(event: Targeted) {
         const players = Object.values(this.units)
@@ -235,7 +282,7 @@ const eventHandlers = {
         const {unit_id: target, skill_id} = event;
         this.units[target].cooldowns[skill_id] = this.units[target].skills
             .find(s => s.id === skill_id)
-            .cooltime;
+            .cooltime || 0;
     },
     hit(event: Hit) {
         const target = this.units[event.target];
@@ -268,7 +315,7 @@ const eventHandlers = {
         const target = this.units[event.target];
         const {effect} = event;
         // todo: Create EffectsBag class
-        const removedEffect:TemporalEffect|StatDecrease = target.effects.find(e => e.effect === effect);
+        const removedEffect: TemporalEffect | StatDecrease = target.effects.find(e => e.effect === effect);
 
         if (removedEffect.stat) {
             this.units[event.target] = {

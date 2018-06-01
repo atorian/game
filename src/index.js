@@ -189,7 +189,7 @@ const battle = new GuildWarBattle(
         createUnit('lushen2', lushen, player.id, [extra_stats['lushen2']]),
     ],
     [
-        createUnit('praha', praha, ai.id, [extra_stats['praha']])
+        createUnit('praha', praha, ai.id, [extra_stats['praha']]),
     ]
 );
 
@@ -207,6 +207,8 @@ const DEBUFS = {
     'speed_slow': 'S',
     'dot': 'X',
     'glancing': 'G',
+    'unrecoverable': 'U',
+    'block_buf': 'B',
 };
 
 function effect(e) {

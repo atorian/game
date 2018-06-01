@@ -148,7 +148,6 @@ export class EnemyDmgSystem implements System {
             let config = configure(step.enemy_dmg);
 
             const raw_dmg = this.formula.evaluate(config.multiplier, context);
-            console.log('raw_dmg', raw_dmg);
 
             return target(config.target, context).map(target => {
 
