@@ -3,6 +3,7 @@ import {createResistPolicy, HarmfulEffects} from "./mechanics/harmful-effects";
 import {BeneficialEffects} from "./mechanics/beneficial-effects";
 import type {Skill} from "./units";
 import _ from 'lodash';
+import {AtbManipulation} from "./mechanics/atb-effects";
 
 
 
@@ -136,6 +137,13 @@ export type Hit = Targeted & {
     damage: number,
 }
 
+// not target as it's only allowed to target ally
+export type WithValue = {
+    value: number,
+}
+export type TargetModifier = Targeted & WithValue;
+
+
 const eventHandlers = {
     battle_started(event: BattleStarted) {
         this.units = [
@@ -233,6 +241,14 @@ const eventHandlers = {
             effects: [...target.effects, event],
             [stat]: target[stat] + value,
         }
+    },
+    atb_boost(event: TargetModifier) {
+        const target = this.units[event.target];
+
+        this.units[event.target] = {
+            ...target,
+            atb: target.atb + event.value,
+        }
     }
 };
 
@@ -282,6 +298,7 @@ export class GuildWarBattle {
             createResistPolicy(roll),
         ));
         this.mechanics.add(new BeneficialEffects());
+        this.mechanics.add(new AtbManipulation());
 
         causes.call(this, {
             name: 'battle_started',
