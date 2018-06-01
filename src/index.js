@@ -4,6 +4,7 @@ import bernard from './units/bernard';
 import slime from './units/slime';
 import {SymfonyStyle} from 'symfony-style-console';
 import Table from 'cli-table2';
+import lushen from "./units/lushen";
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -109,6 +110,11 @@ const target_strategies = {
             return unit.player !== battle.unit.player;
         }
     },
+    aoe_enemy(battle) {
+        return (unit) => {
+            return unit.player !== battle.unit.player;
+        }
+    },
 };
 
 
@@ -168,8 +174,12 @@ const players = {
 };
 
 const battle = new GuildWarBattle(
-    [createUnit(1, bernard, player.id)],
-    [createUnit(2, slime, ai.id)]
+    [
+        createUnit(1, bernard, player.id),
+        createUnit(2, lushen, player.id),
+        createUnit(3, lushen, player.id)
+    ],
+    [createUnit(5, slime, ai.id)]
 );
 
 const BUFS = {

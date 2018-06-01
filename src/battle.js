@@ -130,9 +130,11 @@ export type Effect = Targeted & {
     effect: string,
 }
 
-export type TemporalEffect = Effect & {
+export type Temporal = {
     duration: number,
-}
+};
+
+export type TemporalEffect = Effect & Temporal;
 
 export type StatDecrease = TemporalEffect & {
     stat: string,

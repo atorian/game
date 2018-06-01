@@ -1,7 +1,8 @@
 // @flow
 import type {Contestant, HitEvent, StatDecrease, System, TemporalEffect, Target} from '../battle'
-import {ActionContext} from "../battle";
+import {ActionContext, Temporal} from "../battle";
 import target from "./targeting";
+import _ from 'lodash';
 
 type ResistPolicy = (acc: number, res: number) => boolean;
 
@@ -11,12 +12,18 @@ export function createResistPolicy(roll): ResistPolicy {
     }
 }
 
-type DebufConf = {
-    name: string,
-    duration: number,
+type Irresistable = {
     irresistable: boolean,
-    target: Target,
 }
+type WithChance = {
+    chance?: number,
+}
+type KnownDebuf = TemporalEffect & Irresistable & WithChance;
+type RandomDebuf = Target & Temporal & Irresistable & WithChance & {
+    random: string[]
+}
+
+type DebufConf = KnownDebuf | RandomDebuf;
 
 function configure(conf: any): DebufConf {
     return {
@@ -81,9 +88,11 @@ type DebufEvent = StatDecrease | TemporalEffect;
 
 export class HarmfulEffects implements System {
     resist: ResistPolicy;
+    roll: () => number;
 
-    constructor(resistPolicy: ResistPolicy) {
+    constructor(resistPolicy: ResistPolicy, roll) {
         this.resist = resistPolicy;
+        this.roll = roll;
     }
 
     apply(context: ActionContext, step: DebufStep, events?: Event[] = []): ?DebufEvent[] {
@@ -95,19 +104,25 @@ export class HarmfulEffects implements System {
 
                     return [...target_events, ...target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
 
-                            if (!VALID_DEBUFS.includes(config.name)) {
-                                throw new Error(`Unknown Debuf "${config.name}"`);
+                        if (config.chance && this.roll() > configs.chance) {
+                            return mechanics_events;
+                        }
+
+                        const effect = config.effect ? config.effect : _.sample(config.random);
+
+                            if (!VALID_DEBUFS.includes(effect)) {
+                                throw new Error(`Unknown Debuf "${effect}"`);
                             }
 
                             if (config.irresistable || !this.resist(context.caster.acc, target.res)) {
 
-                                if (STATS_AFFECTED[config.name]) {
-                                    const d = STATS_AFFECTED[config.name];
+                                if (STATS_AFFECTED[effect]) {
+                                    const d = STATS_AFFECTED[effect];
                                     return [...mechanics_events, {
                                         name: 'debuffed',
                                         payload: {
                                             target: target.id,
-                                            effect: config.name,
+                                            effect: effect,
                                             duration: config.duration,
                                             stat: d.stat,
                                             value: d.value(target)
@@ -119,7 +134,7 @@ export class HarmfulEffects implements System {
                                     name: 'debuffed',
                                     payload: {
                                         target: target.id,
-                                        effect: config.name,
+                                        effect: effect,
                                         duration: config.duration,
                                     }
                                 }];
@@ -129,7 +144,7 @@ export class HarmfulEffects implements System {
                                 name: 'resisted',
                                 payload: {
                                     target: target.id,
-                                    effect: config.name,
+                                    effect: effect,
                                 }
                             }];
                         },
