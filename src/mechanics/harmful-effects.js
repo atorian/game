@@ -1,6 +1,7 @@
 // @flow
 import type {Contestant, HitEvent, StatDecrease, System, TemporalEffect, Target} from '../battle'
 import {ActionContext} from "../battle";
+import target from "./targeting";
 
 type ResistPolicy = (acc: number, res: number) => boolean;
 
@@ -89,50 +90,54 @@ export class HarmfulEffects implements System {
         if (step.debufs) {
             const last_hit = (events.filter(e => e.name === 'hit').pop(): ?HitEvent);
             if (!last_hit || last_hit.payload.type !== 'glancing') {
-                return step.debufs.map((conf: DebufConf) => {
-                    const debuf = configure(conf);
+                const configs = step.debufs.map(configure);
+                return configs.reduce((target_events: [], config: DebufConf) => {
 
-                    if (!VALID_DEBUFS.includes(debuf.name)) {
-                        throw new Error(`Unknown Debuf "${debuf.name}"`);
-                    }
+                    return [...target_events, ...target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
 
-                    if (debuf.irresistable || !this.resist(context.caster.acc, context.target.res)) {
+                            if (!VALID_DEBUFS.includes(config.name)) {
+                                throw new Error(`Unknown Debuf "${config.name}"`);
+                            }
 
-                        if (STATS_AFFECTED[debuf.name]) {
-                            const d = STATS_AFFECTED[debuf.name];
-                            return [{
-                                name: 'debuffed',
+                            if (config.irresistable || !this.resist(context.caster.acc, target.res)) {
+
+                                if (STATS_AFFECTED[config.name]) {
+                                    const d = STATS_AFFECTED[config.name];
+                                    return [...mechanics_events, {
+                                        name: 'debuffed',
+                                        payload: {
+                                            target: target.id,
+                                            effect: config.name,
+                                            duration: config.duration,
+                                            stat: d.stat,
+                                            value: d.value(target)
+                                        }
+                                    }];
+                                }
+
+                                return [...mechanics_events, {
+                                    name: 'debuffed',
+                                    payload: {
+                                        target: target.id,
+                                        effect: config.name,
+                                        duration: config.duration,
+                                    }
+                                }];
+                            }
+
+                            return [...mechanics_events, {
+                                name: 'resisted',
                                 payload: {
-                                    target: context.target.id,
-                                    effect: debuf.name,
-                                    duration: debuf.duration,
-                                    stat: d.stat,
-                                    value: d.value(context.target)
+                                    target: target.id,
+                                    effect: config.name,
                                 }
                             }];
-                        }
-
-                        return [{
-                            name: 'debuffed',
-                            payload: {
-                                target: context.target.id,
-                                effect: debuf.name,
-                                duration: debuf.duration,
-                            }
-                        }];
-                    }
-
-                    return [{
-                        name: 'resisted',
-                        payload: {
-                            target: context.target.id,
-                            effect: debuf.name,
-                        }
-                    }];
-                });
+                        },
+                        []
+                    )
+                    ];
+                }, []);
             }
         }
-
-        return [];
     }
 }

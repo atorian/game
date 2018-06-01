@@ -96,8 +96,8 @@ type BattleStarted = {
     teamB: RunedUnit[],
 }
 
-type Targeted = {
-    target: UnitId
+export type Targeted = {
+    target?: UnitId
 }
 type WithSkill = Targeted & {
     skill_id: string
@@ -351,6 +351,7 @@ export class GuildWarBattle {
         const events = this.mechanics.apply({
             caster: this.unit,
             target: this.units[target_id],
+            skill: skill,
             battlefield: this.units,
             additional_dmg: skill.additional_dmg,
             additional_chance: skill.additional_chance,
@@ -375,7 +376,7 @@ export type ActionContext = {
     caster: Contestant,
     battlefield: Contestant[],
     target: Contestant,
-    // skill: Skill, // todo: add skill here
+    skill: Skill,
     additional_dmg: 0,
     additional_chance: 0
 }

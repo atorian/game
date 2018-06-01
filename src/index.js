@@ -151,9 +151,13 @@ const player: Player = {
 
 const ai: Player = {
     id: 2,
-    requestAction(actions): Action {
+    requestAction(skills: Ability[], battle: GuildWarBattle): Action {
         console.log('AI got a turn');
-        process.exit();
+
+        return {
+            skill: skills[0].id,
+            target: 1,
+        };
     }
 };
 
@@ -227,7 +231,6 @@ function renderBattleState(battle: GuildWarBattle, player: Player) {
         io.success(`Action: ${battle.unit.name} uses skill ${action.skill} on ${battle.units[action.target].name}`);
 
         battle.useSkill(currentPlayer.id, action.skill, action.target);
-        console.log(battle.events);
     }
 
     io.section(`Player ${ai.id} team`);

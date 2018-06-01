@@ -1,5 +1,6 @@
 // @flow
 import type {Contestant, ActionContext, TemporalEffect, AllyTarget, System, Effect} from '../battle'
+import target from './targeting';
 
 // not target as it's only allowed to target ally
 type Buf = TemporalEffect & {
@@ -10,8 +11,6 @@ type Buf = TemporalEffect & {
 function configure(conf): Buf {
     return {
         duration: 1,
-        aoe: false,
-        target: "ally",
         ...conf,
     }
 }
@@ -71,38 +70,43 @@ type BufStep = {
 export class BeneficialEffects implements System {
     apply(context: ActionContext, step: BufStep, events: Event[]): ?Event[] {
         if (step.bufs) {
-            return [].concat(...step.bufs.map((conf: Effect) => {
-                const buf = configure(conf);
+            const configs = step.bufs.map(configure);
 
-                // todo: process aoe and targeting
+            return configs.reduce((all_events, config) => {
+                return [...all_events, ...target(config.target, context)
+                    .reduce((target_events: [], target: Contestant) => {
 
-                if (!VALID_BUFS.includes(buf.name)) {
-                    throw new Error(`Unknown Buf "${buf.name}"`);
-                }
+                            if (!VALID_BUFS.includes(config.name)) {
+                                throw new Error(`Unknown Buf "${config.name}"`);
+                            }
 
-                if (STATS_AFFECTED[buf.name]) {
-                    const b = STATS_AFFECTED[buf.name];
-                    return [{
-                        name: 'buffed',
-                        payload: {
-                            target: context.target.id,
-                            effect: buf.name,
-                            duration: buf.duration,
-                            stat: b.stat,
-                            value: b.value(context.target)
-                        }
-                    }];
-                }
+                            if (STATS_AFFECTED[config.name]) {
+                                const b = STATS_AFFECTED[config.name];
+                                return [...target_events, {
+                                    name: 'buffed',
+                                    payload: {
+                                        target: target.id,
+                                        effect: config.name,
+                                        duration: config.duration,
+                                        stat: b.stat,
+                                        value: b.value(target)
+                                    }
+                                }]
+                            }
 
-                return [{
-                    name: 'buffed',
-                    payload: {
-                        target: context.target.id,
-                        effect: buf.name,
-                        duration: buf.duration,
-                    }
-                }];
-            }));
+                            return [...target_events, {
+                                name: 'buffed',
+                                payload: {
+                                    target: target.id,
+                                    effect: config.name,
+                                    duration: config.duration,
+                                }
+                            }];
+                        },
+                        []
+                    )
+                ]
+            }, []);
         }
     }
 }

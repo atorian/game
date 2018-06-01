@@ -55,13 +55,11 @@ export default {
                 {
                     atb_boost: {
                         value: 30,
-                        aoe: true,
                     },
                     bufs: [
                         {
                             name: 'haste',
                             duration: 2,
-                            aoe: true,
                         }
                     ],
                 }
