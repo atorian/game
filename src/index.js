@@ -8,6 +8,7 @@ import lushen from "./units/lushen";
 import megan from "./units/megan";
 const extra_stats = require('../stats.json');
 import _ from 'lodash';
+import praha from "./units/praha";
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -169,7 +170,7 @@ const ai: Player = {
 
         return {
             skill: skills[0].id,
-            target: 1,
+            target: "megan",
         };
     }
 };
@@ -187,7 +188,9 @@ const battle = new GuildWarBattle(
         createUnit('lushen1', lushen, player.id, [extra_stats['lushen1']]),
         createUnit('lushen2', lushen, player.id, [extra_stats['lushen2']]),
     ],
-    [createUnit(5, slime, ai.id)]
+    [
+        createUnit('praha', praha, ai.id, [extra_stats['praha']])
+    ]
 );
 
 const BUFS = {

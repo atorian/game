@@ -4,7 +4,7 @@ import {ActionContext, Temporal} from "../battle";
 import target from "./targeting";
 import _ from 'lodash';
 
-type ResistPolicy = (acc: number, res: number) => boolean;
+export type ResistPolicy = (acc: number, res: number) => boolean;
 
 export function createResistPolicy(roll): ResistPolicy {
     return (acc: number, res: number): boolean => {
@@ -104,7 +104,7 @@ export class HarmfulEffects implements System {
 
                     return [...target_events, ...target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
 
-                        if (config.chance && this.roll() > configs.chance) {
+                        if (config.chance && this.roll() > config.chance) {
                             return mechanics_events;
                         }
 

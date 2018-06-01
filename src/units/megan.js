@@ -38,7 +38,6 @@ export default {
                 {
                     enemy_dmg: {
                         multiplier: 'self.atk * 5.30',
-                        target: 'enemy',
                     },
                     debufs: [
                         {
@@ -46,8 +45,10 @@ export default {
                             duration: 1,
                             chance: 75
                         }
-                    ]
-                    // todo: add strip 1 buf
+                    ],
+                    strip: {
+                        amount: 1,
+                    }
                 }
             ]
         },

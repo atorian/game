@@ -47,7 +47,7 @@ const STATS_AFFECTED = {
     }
 };
 
-const VALID_BUFS = [
+export const VALID_BUFS = [
     ...Object.keys(STATS_AFFECTED),
     'immunity',
     'invincibility',

@@ -23,7 +23,7 @@ export default {
                     enemy_dmg: 'self.atk * 3.6',
                     debufs: [
                         {
-                            name: 'unrecoverable',
+                            effect: 'unrecoverable',
                             duration: 2,
                             chance: 70
                         }

@@ -1,6 +1,6 @@
 import {random} from 'lodash';
 import {ActionContext, Contestant, System} from "../battle";
-import type {HitEvent} from "../battle";
+import type {HitEvent, Targeted} from "../battle";
 import {ELEMENT_RELATIONS} from "./index";
 import target from './targeting';
 
@@ -46,6 +46,11 @@ class CritDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
+        console.log(
+            raw_dmg,
+            (100 + (this.context.skill.additional_dmg + this.context.caster.cd)) / 100
+        );
+
         return raw_dmg * (1 + (this.context.skill.additional_dmg + this.context.caster.cd) / 100);
     }
 }
@@ -102,8 +107,9 @@ export class HitStrategyFactory {
     }
 }
 
-type HitConfig = {
-
+type HitConfig = Targeted & {
+    multiplier: string,
+    ignore_def: boolean,
 }
 
 function configure(conf: string | Object): HitConfig {
@@ -142,6 +148,7 @@ export class EnemyDmgSystem implements System {
             let config = configure(step.enemy_dmg);
 
             const raw_dmg = this.formula.evaluate(config.multiplier, context);
+            console.log('raw_dmg', raw_dmg);
 
             return target(config.target, context).map(target => {
 
@@ -153,28 +160,17 @@ export class EnemyDmgSystem implements System {
                 const multiplied_dmg = strategy.apply(raw_dmg);
                 // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
 
+                const dmgReduction = config.ignore_def ? 1 : 1000 / (1140 + 3.5 * target.def);
+
                 return {
                     name: 'hit',
                     payload: {
                         target: target.id,
                         type: strategy.name,
-                        damage: Math.floor(
-                            multiplied_dmg - (config.ignore_def ? 0 : 1000 / (1140 + 3.5 * target.def))
-                        ),
+                        damage: Math.floor(multiplied_dmg * dmgReduction),
                     }
                 };
             });
-
-            // return [{
-            //     name: 'hit',
-            //     payload: {
-            //         target: context.target.id,
-            //         type: strategy.name,
-            //         damage: Math.floor(
-            //             multiplied_dmg - (ignore_def ? 0 : 1000 / (1140 + 3.5 * context.target.def))
-            //         ),
-            //     }
-            // }];
         }
     }
 }

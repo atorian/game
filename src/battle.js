@@ -4,6 +4,7 @@ import {BeneficialEffects} from "./mechanics/beneficial-effects";
 import type {Skill} from "./units";
 import _ from 'lodash';
 import {AtbManipulation} from "./mechanics/atb-effects";
+import {Strip} from "./mechanics/strip";
 
 
 export type Unit = {
@@ -76,6 +77,7 @@ export type Contestant = RunedUnit & {
     res: number,
     acc: number,
     glancing_mod: number,
+    effects: TemporalEffect[],
     cooldowns: { [string]: number }
 }
 
@@ -262,6 +264,25 @@ const eventHandlers = {
             [stat]: target[stat] + value,
         }
     },
+    strip(event: Effect) {
+        const target = this.units[event.target];
+        const {effect} = event;
+        // todo: Create EffectsBag class
+        const removedEffect:TemporalEffect|StatDecrease = target.effects.find(e => e.effect === effect);
+
+        if (removedEffect.stat) {
+            this.units[event.target] = {
+                ...target,
+                effects: target.effects.filter(e => e !== removedEffect),
+                [removedEffect.stat]: [removedEffect.stat] - removedEffect.value,
+            }
+        } else {
+            this.units[event.target] = {
+                ...target,
+                effects: target.effects.filter(e => e !== removedEffect),
+            }
+        }
+    },
     atb_boost(event: TargetModifier) {
         const target = this.units[event.target];
 
@@ -316,9 +337,14 @@ export class GuildWarBattle {
         ));
         this.mechanics.add(new HarmfulEffects(
             createResistPolicy(roll),
+            roll,
         ));
         this.mechanics.add(new BeneficialEffects());
         this.mechanics.add(new AtbManipulation());
+        this.mechanics.add(new Strip(
+            createResistPolicy(roll),
+            roll,
+        ));
 
         causes.call(this, {
             name: 'battle_started',
@@ -417,9 +443,7 @@ export type ActionContext = {
     caster: Contestant,
     battlefield: Contestant[],
     target: Contestant,
-    skill: Skill,
-    additional_dmg: 0,
-    additional_chance: 0
+    skill: Skill
 }
 
 
