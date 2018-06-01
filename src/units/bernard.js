@@ -36,11 +36,11 @@ export default {
                     },
                     debufs: [
                         {
-                            name: 'def_break',
+                            effect: 'def_break',
                             duration: 2
                         },
                         {
-                            name: 'atk_break',
+                            effect: 'atk_break',
                             duration: 2
                         }
                     ]
@@ -58,7 +58,7 @@ export default {
                     },
                     bufs: [
                         {
-                            name: 'haste',
+                            effect: 'haste',
                             duration: 2,
                         }
                     ],

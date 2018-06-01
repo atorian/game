@@ -5,6 +5,7 @@ import slime from './units/slime';
 import {SymfonyStyle} from 'symfony-style-console';
 import Table from 'cli-table2';
 import lushen from "./units/lushen";
+import megan from "./units/megan";
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -176,8 +177,9 @@ const players = {
 const battle = new GuildWarBattle(
     [
         createUnit(1, bernard, player.id),
-        createUnit(2, lushen, player.id),
-        createUnit(3, lushen, player.id)
+        createUnit(4, megan, player.id),
+        // createUnit(2, lushen, player.id),
+        // createUnit(3, lushen, player.id),
     ],
     [createUnit(5, slime, ai.id)]
 );

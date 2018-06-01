@@ -54,9 +54,9 @@ const STATS_AFFECTED = {
         }
     },
     'glancing': {
-        stat: 'glancing',
+        stat: 'glancing_mod',
         value(target: Contestant) {
-            return -50;
+            return 50;
         }
     }
 };

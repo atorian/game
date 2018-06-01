@@ -1,10 +1,9 @@
 // @flow
-import type {Contestant, ActionContext, TemporalEffect, AllyTarget, System, Effect} from '../battle'
+import type {Contestant, ActionContext, TemporalEffect, AllyTarget, System} from '../battle'
 import target from './targeting';
 
 // not target as it's only allowed to target ally
 type Buf = TemporalEffect & {
-    aoe: boolean,
     target: AllyTarget
 }
 
@@ -76,17 +75,17 @@ export class BeneficialEffects implements System {
                 return [...all_events, ...target(config.target, context)
                     .reduce((target_events: [], target: Contestant) => {
 
-                            if (!VALID_BUFS.includes(config.name)) {
-                                throw new Error(`Unknown Buf "${config.name}"`);
+                            if (!VALID_BUFS.includes(config.effect)) {
+                                throw new Error(`Unknown Buf "${config.effect}"`);
                             }
 
-                            if (STATS_AFFECTED[config.name]) {
-                                const b = STATS_AFFECTED[config.name];
+                            if (STATS_AFFECTED[config.effect]) {
+                                const b = STATS_AFFECTED[config.effect];
                                 return [...target_events, {
                                     name: 'buffed',
                                     payload: {
                                         target: target.id,
-                                        effect: config.name,
+                                        effect: config.effect,
                                         duration: config.duration,
                                         stat: b.stat,
                                         value: b.value(target)
@@ -98,7 +97,7 @@ export class BeneficialEffects implements System {
                                 name: 'buffed',
                                 payload: {
                                     target: target.id,
-                                    effect: config.name,
+                                    effect: config.effect,
                                     duration: config.duration,
                                 }
                             }];
