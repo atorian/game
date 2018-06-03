@@ -47,7 +47,8 @@ class CritDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + (this.context.skill.power + this.context.caster.cd) / 100);
+
+        return raw_dmg * (100 + this.context.skill.power + this.context.caster.cd) / 100;
     }
 }
 
@@ -60,7 +61,7 @@ class CrushingDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + this.context.skill.power / 100 + 0.3);
+        return raw_dmg * (100 + this.context.skill.power + 30) / 100;
     }
 }
 
@@ -73,7 +74,7 @@ class NormalDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + this.context.skill.power / 100);
+        return raw_dmg * (100 + this.context.skill.power) / 100;
     }
 }
 
@@ -152,6 +153,10 @@ export class EnemyDmgSystem implements Mechanics {
             });
 
             const multiplied_dmg = strategy.apply(raw_dmg);
+            // console.log('unit', context.caster);
+            // console.log('raw_dmg', raw_dmg);
+            // console.log('multiplied_dmg', multiplied_dmg);
+            // process.exit();
             // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
 
             const dmgReduction = config.ignore_def ? 1 : 1000 / (1140 + 3.5 * target.def);
