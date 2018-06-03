@@ -14,18 +14,14 @@ export default {
         {
             id: 'Jump Slam',
             target: 'enemy',
-            additional_dmg: 0,
-            additional_chance: 0,
+            power: 0,
+            chance: 0,
             iterations: [
                 {
                     enemy_dmg: 'self.atk * 3.3 + 35',
-                    debuf: [
-                        {
-                            name: 'spd slow',
-                            chance: 30,
-                            duration: 1,
-                        }
-                    ]
+                    slow: {
+                        chance: 30
+                    },
                 }
             ]
         }

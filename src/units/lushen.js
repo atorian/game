@@ -16,36 +16,32 @@ export default {
         {
             id: 'Flying Cards',
             target: 'enemy',
-            additional_dmg: 20,
-            additional_chance: 30,
+            power: 20,
+            chance: 30,
             iterations: [
                 {
                     enemy_dmg: 'self.atk * 3.6',
-                    debufs: [
-                        {
-                            effect: 'unrecoverable',
-                            duration: 2,
-                            chance: 70
-                        }
-                    ]
+                    unrecoverable: {
+                        duration: 2,
+                        chance: 70,
+                    },
                 }
             ]
         },
         {
             id: 'Surprise Box',
             cooltime: 3,
-            additional_dmg: 25,
+            power: 25,
             target: 'aoe_enemy',
             iterations: [
                 {
-                    enemy_dmg: {
-                        multiplier: 'self.atk * 2.40',
-                    },
-                    debufs: [
-                        {
-                            random: ['stun', 'glancing', 'slow'],
-                            duration: 1
-                        },
+                    enemy_dmg: 'self.atk * 2.40',
+                },
+                {
+                    random_debuf: [
+                        {stun: 1,},
+                        {glancing: 1,},
+                        {slow: 1,},
                     ]
                 }
             ]
@@ -54,7 +50,7 @@ export default {
             id: 'Amputation Magic',
             cooltime: 4,
             target: 'aoe_enemy',
-            additional_dmg: 30,
+            power: 30,
             iterations: [
                 {
                     enemy_dmg: {

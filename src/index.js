@@ -9,6 +9,7 @@ import megan from "./units/megan";
 const extra_stats = require('../stats.json');
 import _ from 'lodash';
 import praha from "./units/praha";
+import bastet from "./units/bastet";
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -168,9 +169,10 @@ const ai: Player = {
     requestAction(skills: Ability[], battle: GuildWarBattle): Action {
         console.log('AI got a turn');
 
+
         return {
             skill: skills[0].id,
-            target: "megan",
+            target: "bastet",
         };
     }
 };
@@ -184,7 +186,7 @@ const players = {
 const battle = new GuildWarBattle(
     [
         createUnit('bernie', bernard, player.id, [extra_stats['bernie']]),
-        createUnit('megan', megan, player.id, [extra_stats['megan']]),
+        createUnit('bastet', bastet, player.id, [extra_stats['bastet']]),
         createUnit('lushen1', lushen, player.id, [extra_stats['lushen1']]),
         createUnit('lushen2', lushen, player.id, [extra_stats['lushen2']]),
     ],

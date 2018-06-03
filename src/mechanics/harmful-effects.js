@@ -1,8 +1,8 @@
 // @flow
-import type {Contestant, HitEvent, StatDecrease, System, TemporalEffect, Target} from '../battle'
+import type {Contestant, HitEvent, StatDecrease, Mechanics, TemporalEffect, Target} from '../battle'
 import {ActionContext, Temporal} from "../battle";
 import target from "./targeting";
-import _ from 'lodash';
+import {HarmfulEffectsFactory} from "./index";
 
 export type ResistPolicy = (acc: number, res: number) => boolean;
 
@@ -19,9 +19,6 @@ type WithChance = {
     chance?: number,
 }
 type KnownDebuf = TemporalEffect & Irresistable & WithChance;
-type RandomDebuf = Target & Temporal & Irresistable & WithChance & {
-    random: string[]
-}
 
 type DebufConf = KnownDebuf | RandomDebuf;
 
@@ -34,125 +31,57 @@ function configure(conf: any): DebufConf {
     }
 }
 
-const STATS_AFFECTED = {
-    'def_break': {
-        stat: 'def',
-        value(target: Contestant) {
-            return target.max_def * 0.7
-        }
-    },
-    'atk_break': {
-        stat: 'atk',
-        value(target: Contestant) {
-            return target.max_atk * 0.5
-        }
-    },
-    'slow': {
-        stat: 'spd',
-        value(target: Contestant) {
-            return target.max_spd * 0.3
-        }
-    },
-    'glancing': {
-        stat: 'glancing_mod',
-        value(target: Contestant) {
-            return 50;
-        }
-    }
-};
-
-const VALID_DEBUFS = [
-    'def_break',
-    'atk_break',
-    'slow',
-    'glancing',
-    'brand',
-    'block_buf',
-    'unrecoverable',
-    'taunt',
-    'oblivion',
-    'dot',
-    'bomb',
-    'freeze',
-    'stun',
-    'sleep',
-    'silence',
-];
-
-
 type DebufStep = {
     debufs?: DebufConf[]
 }
 
 type DebufEvent = StatDecrease | TemporalEffect;
 
-export class HarmfulEffects implements System {
+export class HarmfulEffects implements Mechanics {
     resist: ResistPolicy;
     roll: () => number;
 
-    constructor(resistPolicy: ResistPolicy, roll) {
+    constructor(resistPolicy: ResistPolicy, roll, debuf) {
         this.resist = resistPolicy;
         this.roll = roll;
+        this.debuf = debuf;
     }
 
     apply(context: ActionContext, step: DebufStep, events?: Event[] = []): ?DebufEvent[] {
-        if (step.debufs) {
-            const last_hit = (events.filter(e => e.name === 'hit').pop(): ?HitEvent);
-            if (!last_hit || last_hit.payload.type !== 'glancing') {
-                const configs = step.debufs.map(configure);
-                return configs.reduce((target_events: [], config: DebufConf) => {
 
-                    return [...target_events, ...target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
+        const config = configure(step);
 
-                        if (config.chance && this.roll() > config.chance) {
-                            return mechanics_events;
+        const last_hit = (events.filter(e => e.name === 'hit').pop(): ?HitEvent);
+
+        if (!last_hit || last_hit.payload.type !== 'glancing') {
+            return target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
+
+                    if (config.chance && this.roll() > config.chance) {
+                        return mechanics_events;
+                    }
+
+                    if (config.irresistable || !this.resist(context.caster.acc, target.res)) {
+                        return [...mechanics_events, {
+                            name: 'debuffed',
+                            payload: {
+                                ...this.debuf(target),
+                                target: target.id,
+                                duration: config.duration,
+                            },
+                        }];
+                    }
+
+                    return [...mechanics_events, {
+                        name: 'resisted',
+                        payload: {
+                            target: target.id,
+                            effect: config.effect,
                         }
-
-                        const effect = config.effect ? config.effect : _.sample(config.random);
-
-                            if (!VALID_DEBUFS.includes(effect)) {
-                                throw new Error(`Unknown Debuf "${effect}"`);
-                            }
-
-                            if (config.irresistable || !this.resist(context.caster.acc, target.res)) {
-
-                                if (STATS_AFFECTED[effect]) {
-                                    const d = STATS_AFFECTED[effect];
-                                    return [...mechanics_events, {
-                                        name: 'debuffed',
-                                        payload: {
-                                            target: target.id,
-                                            effect: effect,
-                                            duration: config.duration,
-                                            stat: d.stat,
-                                            value: d.value(target)
-                                        }
-                                    }];
-                                }
-
-                                return [...mechanics_events, {
-                                    name: 'debuffed',
-                                    payload: {
-                                        target: target.id,
-                                        effect: effect,
-                                        duration: config.duration,
-                                    }
-                                }];
-                            }
-
-                            return [...mechanics_events, {
-                                name: 'resisted',
-                                payload: {
-                                    target: target.id,
-                                    effect: effect,
-                                }
-                            }];
-                        },
-                        []
-                    )
-                    ];
-                }, []);
-            }
+                    }];
+                },
+                []
+            )
         }
     }
 }
+

@@ -34,7 +34,7 @@ const hwadam_bodygard = {
 const panda = {
     id: 'Winds and Clouds',
     passive: true,
-    additional_dmg: {
+    power: {
         multiplier: 'self.def * 1.6',
     },
     guard: {

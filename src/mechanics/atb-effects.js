@@ -1,5 +1,5 @@
 // @flow
-import type {ActionContext, System, Targeted, Contestant} from '../battle'
+import type {ActionContext, Mechanics, Targeted, Contestant} from '../battle'
 import target from './targeting';
 import {TargetModifier} from "../battle";
 
@@ -7,26 +7,37 @@ type AtbStep = {
     atb_boost?: TargetModifier
 }
 
-function configure(conf): TargetModifier {
+function configure(conf: number | Object): TargetModifier {
+
+    if (typeof conf === 'number') {
+        return {
+            value: conf,
+        };
+    }
+
     if (!conf.value) {
         throw new Error('Missing config parameter "value"');
     }
+
     return conf;
 }
 
-export class AtbManipulation implements System {
+type ATBEffect = 'increase'|'decrease';
+
+export class AtbManipulation implements Mechanics {
+    constructor(effect:ATBEffect) {
+        this.effect = effect;
+    }
     apply(context: ActionContext, step: AtbStep, events: Event[]): ?Event[] {
-        if (step.atb_boost) {
-            const config = configure(step.atb_boost);
-            return target(config.target, context).reduce((mechanics_events:[], target:Contestant) => {
-                return [...mechanics_events, {
-                    name: 'atb_boost',
-                    payload: {
-                        target: target.id,
-                        value: config.value,
-                    }
-                }];
-            }, []);
-        }
+        const config = configure(step);
+        return target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
+            return [...mechanics_events, {
+                name: `atb_${this.effect}`,
+                payload: {
+                    target: target.id,
+                    value: config.value,
+                }
+            }];
+        }, []);
     }
 }

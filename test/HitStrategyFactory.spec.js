@@ -22,8 +22,6 @@ describe('HitStrategyFactory', () => {
             battlefield: [caster, target],
             target,
             skill: caster.skills[0], // todo: add skill here
-            additional_dmg: 0,
-            additional_chance: 0
         });
 
         assert.equal(strategy.name, 'glancing');

@@ -1,5 +1,5 @@
 import {random} from 'lodash';
-import {ActionContext, Contestant, System} from "../battle";
+import {ActionContext, Contestant, Mechanics} from "../battle";
 import type {HitEvent, Targeted} from "../battle";
 import {ELEMENT_RELATIONS} from "./index";
 import target from './targeting';
@@ -21,6 +21,7 @@ function hasAdvantage(caster: Contestant, target: Contestant): boolean {
 
 interface DamageStrategy {
     name: string;
+
     apply(raw_dmg: number): number;
 }
 
@@ -46,7 +47,7 @@ class CritDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + (this.context.skill.additional_dmg + this.context.caster.cd) / 100);
+        return raw_dmg * (1 + (this.context.skill.power + this.context.caster.cd) / 100);
     }
 }
 
@@ -59,7 +60,7 @@ class CrushingDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + this.context.skill.additional_dmg / 100 + 0.3);
+        return raw_dmg * (1 + this.context.skill.power / 100 + 0.3);
     }
 }
 
@@ -72,7 +73,7 @@ class NormalDamageStrategy implements DamageStrategy {
     }
 
     apply(raw_dmg: number): number {
-        return raw_dmg * (1 + this.context.skill.additional_dmg / 100);
+        return raw_dmg * (1 + this.context.skill.power / 100);
     }
 }
 
@@ -108,6 +109,7 @@ type HitConfig = Targeted & {
 }
 
 function configure(conf: string | Object): HitConfig {
+    console.log(conf);
     if (typeof conf === 'string') {
         return {
             target: 'enemy',
@@ -129,7 +131,7 @@ function configure(conf: string | Object): HitConfig {
 }
 
 // SYSTEM
-export class EnemyDmgSystem implements System {
+export class EnemyDmgSystem implements Mechanics {
     hit_strategy_factory: HitStrategyFactory;
     formula: Multiplier;
 
@@ -139,32 +141,30 @@ export class EnemyDmgSystem implements System {
     }
 
     apply(context: ActionContext, step, events: Event[] = []): ?HitEvent[] {
-        if (step.enemy_dmg) {
-            let config = configure(step.enemy_dmg);
+        let config = configure(step);
 
-            const raw_dmg = this.formula.evaluate(config.multiplier, context);
+        const raw_dmg = this.formula.evaluate(config.multiplier, context);
 
-            return target(config.target, context).map(target => {
+        return target(config.target, context).map(target => {
 
-                const strategy = this.hit_strategy_factory.create({
-                    ...context,
-                    target,
-                });
-
-                const multiplied_dmg = strategy.apply(raw_dmg);
-                // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
-
-                const dmgReduction = config.ignore_def ? 1 : 1000 / (1140 + 3.5 * target.def);
-
-                return {
-                    name: 'hit',
-                    payload: {
-                        target: target.id,
-                        type: strategy.name,
-                        damage: Math.floor(multiplied_dmg * dmgReduction),
-                    }
-                };
+            const strategy = this.hit_strategy_factory.create({
+                ...context,
+                target,
             });
-        }
+
+            const multiplied_dmg = strategy.apply(raw_dmg);
+            // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
+
+            const dmgReduction = config.ignore_def ? 1 : 1000 / (1140 + 3.5 * target.def);
+
+            return {
+                name: 'hit',
+                payload: {
+                    target: target.id,
+                    type: strategy.name,
+                    damage: Math.floor(multiplied_dmg * dmgReduction),
+                }
+            };
+        });
     }
 }

@@ -13,7 +13,7 @@ export default {
     skills: [
         {
             id: 'Passing Time',
-            additional_dmg: 30,
+            power: 30,
             target: 'enemy',
             iterations: [
                 {
@@ -42,26 +42,23 @@ export default {
         },
         {
             id: 'Predicted Future',
-            additional_dmg: 30,
-            additional_chance: 10,
+            power: 30,
+            chance: 10,
             cooltime: 3,
             target: 'aoe_enemy',
             iterations: [
+                // todo: random iterations
                 {
                     enemy_dmg: {
                         multiplier: 'self.atk * 300',
                     },
-                    strip: {
-                        amount: 'all',
-                    }
+                    strip: 'all',
                 },
                 {
-                    debufs: [
-                        {
-                            effect: 'dot',
-                            duration: 2
-                        },
-                    ]
+                    dot: {
+                        duration: 2,
+                        // amount: x removed buffs
+                    },
                 }
             ]
         },
@@ -69,17 +66,13 @@ export default {
             id: 'Daydream',
             cooltime: 4,
             target: 'aoe_ally',
-            additional_dmg: 20,
+            power: 20,
             iterations: [
                 {
                     heal: '50%',
-                    debufs: [
-                        {
-                            effect: 'sleep',
-                            target: 'self',
-                            duration: 1,
-                        }
-                    ],
+                    sleep: {
+                        target: 'self',
+                    }
                 }
             ]
         }

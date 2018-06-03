@@ -13,42 +13,33 @@ export default {
     skills: [
         {
             id: 'Crow Summoning',
-            additional_dmg: 30,
-            additional_chance: 30,
+            power: 30,
+            chance: 30,
             target: 'enemy',
             iterations: [
                 {
                     enemy_dmg: 'self.atk * 3.6',
-                    debufs: [
-                        {
-                            effect: 'dot',
-                            chance: 50,
-                        }
-                    ]
+                    dot: {
+                        chance: 50,
+                    }
                 }
             ]
         },
         {
             id: 'Toad Poison',
-            additional_dmg: 30,
-            additional_chance: 25,
+            power: 30,
+            chance: 25,
             cooltime: 3,
             target: 'enemy',
             iterations: [
                 {
-                    enemy_dmg: {
-                        multiplier: 'self.atk * 5.30',
+                    enemy_dmg: 'self.atk * 5.30',
+                    strip: 1,
+                },
+                {
+                    block_buf: {
+                        chance: 75,
                     },
-                    debufs: [
-                        {
-                            effect: 'block_buf',
-                            duration: 1,
-                            chance: 75
-                        }
-                    ],
-                    strip: {
-                        amount: 1,
-                    }
                 }
             ]
         },
@@ -61,16 +52,8 @@ export default {
                     atb_boost: {
                         value: 20,
                     },
-                    bufs: [
-                        {
-                            effect: 'atk_buf',
-                            duration: 2,
-                        },
-                        {
-                            effect: 'def_buf',
-                            duration: 2,
-                        }
-                    ],
+                    atk_buf: 2,
+                    def_buf: 2,
                 }
             ]
         }

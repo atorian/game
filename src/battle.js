@@ -1,10 +1,11 @@
 import {EnemyDmgSystem, HitStrategyFactory, Multiplier} from "./mechanics/enemy-damage";
-import {createResistPolicy, HarmfulEffects} from "./mechanics/harmful-effects";
-import {BeneficialEffects} from "./mechanics/beneficial-effects";
+import HarmfulEffectsFactory, {roll, RandomHarmfulEffects} from "./mechanics/";
+import {BeneficialEffects, BUFFS} from "./mechanics/beneficial-effects";
 import type {Skill} from "./units";
 import _ from 'lodash';
 import {AtbManipulation} from "./mechanics/atb-effects";
 import {Strip} from "./mechanics/strip";
+import {createResistPolicy} from "./mechanics/harmful-effects";
 
 
 export type Unit = {
@@ -214,6 +215,7 @@ const eventHandlers = {
     },
     effect_removed({target, effect}) {
         const effects = this.units[target].effects;
+
         this.units[target] = {
             ...this.units[target],
             // fixme: this will remove all dots, should remove just 1
@@ -222,7 +224,7 @@ const eventHandlers = {
     },
     turn_ended(event: any) {
 
-        this.unit.effects.forEach((e:Effect|TemporalEffect) => {
+        this.unit.effects.forEach((e: Effect | TemporalEffect) => {
             if (e.duration) {
                 if (e.duration > 1) {
                     causes.call(this, {
@@ -330,9 +332,8 @@ const eventHandlers = {
             }
         }
     },
-    atb_boost(event: TargetModifier) {
+    atb_increase(event: TargetModifier) {
         const target = this.units[event.target];
-
         this.units[event.target] = {
             ...target,
             atb: target.atb + event.value,
@@ -343,6 +344,7 @@ const eventHandlers = {
 function when(event: Event) {
     const handler = eventHandlers[event.name];
     if (handler) {
+        console.log('handle', event.name, event.payload);
         handler.call(this, event.payload);
     } else {
         console.warn(`Can not handle event: ${event.name}`);
@@ -351,7 +353,7 @@ function when(event: Event) {
 
 function causes(event) {
     this.events.push(event);
-    // todo: this.mechanics.apply(m => m.handle(event));
+    // todo: this.skill_mechanics.apply(m => m.handle(event));
     this.applyEvent(event);
 }
 
@@ -365,9 +367,6 @@ function byReadiness(uA: Contestant, uB: Contestant) {
     return uA.atb - uB.atb;
 }
 
-function roll() {
-    return _.random(1, 100);
-}
 
 export class GuildWarBattle {
     units: Contestant[];
@@ -377,18 +376,50 @@ export class GuildWarBattle {
     constructor(teamA: RunedUnit[], teamB: RunedUnit[]) {
         this.events = [];
         this.version = 0;
-        this.mechanics = new SkillSystem();
-        this.mechanics.add(new EnemyDmgSystem(
+        this.skill_mechanics = new SkillMechanics();
+        this.skill_mechanics.set('enemy_dmg', new EnemyDmgSystem(
             new HitStrategyFactory(roll),
             new Multiplier()
         ));
-        this.mechanics.add(new HarmfulEffects(
-            createResistPolicy(roll),
-            roll,
-        ));
-        this.mechanics.add(new BeneficialEffects());
-        this.mechanics.add(new AtbManipulation());
-        this.mechanics.add(new Strip(
+
+        for (const debuf of [
+            'def_break',
+            'atk_break',
+            'slow',
+            'glancing',
+            'brand',
+            'block_buf',
+            'unrecoverable',
+            'taunt',
+            'oblivion',
+            'freeze',
+            'stun',
+            'sleep',
+            'silence',
+        ]) {
+            this.skill_mechanics.set(
+                debuf,
+                HarmfulEffectsFactory.create(debuf)
+            );
+        }
+
+        this.skill_mechanics.set(
+            'random_debuf',
+            new RandomHarmfulEffects(
+                HarmfulEffectsFactory
+            )
+        );
+
+        this.skill_mechanics.set('atb_boost', new AtbManipulation('increase'));
+        this.skill_mechanics.set('atb_decrease', new AtbManipulation('decrease'));
+        // todo: add `dot` and `bomb` skill_mechanics
+
+
+        for (const buf in BUFFS) {
+            this.skill_mechanics.set(buf, new BeneficialEffects(BUFFS[buf]));
+        }
+
+        this.skill_mechanics.set('strip', new Strip(
             createResistPolicy(roll),
             roll,
         ));
@@ -462,14 +493,12 @@ export class GuildWarBattle {
 
         const skill = this.unit.skills.find(skill => skill.id === skill_id);
 
-        const events = this.mechanics.apply({
+        const events = this.skill_mechanics.apply({
+            battlefield: this.units,
             caster: this.unit,
             target: this.units[target_id],
             skill: skill,
-            battlefield: this.units,
-            additional_dmg: skill.additional_dmg,
-            additional_chance: skill.additional_chance,
-        }, skill);
+        });
 
         events.forEach(causes.bind(this));
 
@@ -494,49 +523,43 @@ export type ActionContext = {
 }
 
 
-class SkillSystem {
-    systems: SystemsAggregate;
+class SkillMechanics {
 
     constructor() {
-        this.systems = new SystemsAggregate();
+        this.mechanics = new Map();
     }
 
-    add(system: System) {
-        this.systems.add(system)
+    set(id, mechanic) {
+        this.mechanics.set(id, mechanic);
     }
 
-    apply(context: ActionContext, skill) {
-        return skill.iterations.reduce((events, step) => {
-            return [
-                ...events,
-                ...this.systems.apply(context, step, events)
-            ];
+    apply(context: ActionContext) {
+        // todo: add random amount of iterations @see Rigel, Okeanos
+        return context.skill.iterations.reduce((events, step) => {
+            return Object.keys(step).reduce((accumulated_events, mechanic_id) => {
+
+                if (this.mechanics.has(mechanic_id)) {
+                    return [
+                        ...accumulated_events,
+                        ...this.mechanics.get(mechanic_id).apply(
+                            context,
+                            step[mechanic_id],
+                            accumulated_events
+                        ),
+                    ]
+                }
+
+                console.debug('unknown skill_mechanics: ', mechanic_id);
+                return accumulated_events;
+
+            }, events);
         }, []);
     }
 }
 
-export interface System {
+export interface Mechanics {
     apply(context: ActionContext, step: any, events: Event[]): Event[];
 }
-
-class SystemsAggregate {
-    systems: System[] = [];
-
-    add(system: System) {
-        this.systems.push(system);
-    }
-
-    apply(context: ActionContext, step) {
-        return this.systems.reduce((events, system) => {
-            const new_events = system.apply(context, step, events);
-            if (new_events) {
-                return [...events, ...[].concat(new_events)];
-            }
-            return events;
-        }, []);
-    }
-}
-
 
 // battle started
 // will runes buf applied

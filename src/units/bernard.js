@@ -13,7 +13,7 @@ export default {
     skills: [
         {
             id: 'Snatch',
-            additional_dmg: 30,
+            power: 30,
             target: 'enemy',
             iterations: [
                 {
@@ -23,7 +23,7 @@ export default {
         },
         {
             id: 'Body Slam',
-            additional_dmg: 30,
+            power: 30,
             cooltime: 2,
             target: 'enemy',
             iterations: [
@@ -34,16 +34,8 @@ export default {
                         ignore_def: false,
                         ignore_bufs: false,
                     },
-                    debufs: [
-                        {
-                            effect: 'def_break',
-                            duration: 2
-                        },
-                        {
-                            effect: 'atk_break',
-                            duration: 2
-                        }
-                    ]
+                    def_break: 2,
+                    atk_break: 2,
                 }
             ]
         },
@@ -56,12 +48,7 @@ export default {
                     atb_boost: {
                         value: 30,
                     },
-                    bufs: [
-                        {
-                            effect: 'haste',
-                            duration: 2,
-                        }
-                    ],
+                    haste: 2,
                 }
             ]
         }
