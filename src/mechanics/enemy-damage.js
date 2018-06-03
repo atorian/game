@@ -153,13 +153,9 @@ export class EnemyDmgSystem implements Mechanics {
             });
 
             const multiplied_dmg = strategy.apply(raw_dmg);
-            // console.log('unit', context.caster);
-            // console.log('raw_dmg', raw_dmg);
-            // console.log('multiplied_dmg', multiplied_dmg);
-            // process.exit();
             // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
 
-            const dmgReduction = config.ignore_def ? 1 : 1000 / (1140 + 3.5 * target.def);
+            const dmgReduction = 1000 / (1140 + 3.5 * (config.ignore_def ? 0 : target.def));
 
             return {
                 name: 'hit',

@@ -6,6 +6,7 @@ import {SymfonyStyle} from 'symfony-style-console';
 import Table from 'cli-table2';
 import lushen from "./units/lushen";
 import megan from "./units/megan";
+
 const extra_stats = require('../stats.json');
 import _ from 'lodash';
 import praha from "./units/praha";
@@ -193,26 +194,30 @@ function windAttack30(unit: BaseUnit) {
 }
 
 const totems = [
-    function(unit: BaseUnit) {
+    function (unit: BaseUnit) {
         return unit.def * 0.2;
         return {def: unit.def * 0.20};
     },
-    function(unit: BaseUnit) {
+    function (unit: BaseUnit) {
         return {atk: unit.atk * 0.21};
     },
-    function(unit: BaseUnit) {
+    function (unit: BaseUnit) {
         return {atk: unit.atk * 0.20};
     },
-    function(unit: BaseUnit) {
+    function (unit: BaseUnit) {
         return {hp: unit.hp * 0.20};
     },
-    function(unit: BaseUnit) {
+    function (unit: BaseUnit) {
         return {spd: unit.spd * 0.15};
     },
-    function(unit: BaseUnit) {
+    function (unit: BaseUnit) {
         return {cd: 25};
     },
 ];
+
+function fightSetBonus(unit: BaseUnit, numSets: number = 1) {
+    return {atk: unit.atk * 0.08 * numSets};
+}
 
 
 const battle = new GuildWarBattle(
@@ -220,22 +225,26 @@ const battle = new GuildWarBattle(
         createUnit('bernie', bernard, player.id, [
             extra_stats['bernie'],
             windAttack30(bernard),
-            ...totems.map(f => f(bernard))
+            fightSetBonus(bernard, 2),
+            ...totems.map(f => f(bernard)),
         ]),
         createUnit('bastet', bastet, player.id, [
             extra_stats['bastet'],
             windAttack30(bastet),
-            ...totems.map(f => f(bastet))
+            fightSetBonus(bastet, 2),
+            ...totems.map(f => f(bastet)),
         ]),
         createUnit('lushen1', lushen, player.id, [
             extra_stats['lushen1'],
             windAttack30(lushen),
-            ...totems.map(f => f(lushen))
+            fightSetBonus(lushen, 2),
+            ...totems.map(f => f(lushen)),
         ]),
         createUnit('lushen2', lushen, player.id, [
             extra_stats['lushen2'],
             windAttack30(lushen),
-            ...totems.map(f => f(lushen))
+            fightSetBonus(lushen, 2),
+            ...totems.map(f => f(lushen)),
         ]),
     ],
     [
