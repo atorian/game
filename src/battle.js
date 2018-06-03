@@ -6,21 +6,7 @@ import _ from 'lodash';
 import {AtbManipulation} from "./mechanics/atb-effects";
 import {Strip} from "./mechanics/strip";
 import {createResistPolicy} from "./mechanics/harmful-effects";
-
-
-export type Unit = {
-    name: string,
-    element: 'water' | 'fire' | 'wind' | 'light' | 'dark',
-    base_hp: number,
-    base_atk: number,
-    base_def: number,
-    base_spd: number,
-    base_cr: number,
-    base_cd: number,
-    base_acc: number,
-    base_res: number,
-    skills: Skill[],
-}
+import {BaseUnit} from "./units";
 
 export type RuneSet =
     'Energy'
@@ -53,7 +39,7 @@ export type Rune = {
 
 type UnitId = string;
 
-export type RunedUnit = Unit & {
+export type Unit = BaseUnit & {
     id: UnitId,
     player: string,
     max_hp: number,
@@ -67,7 +53,7 @@ export type RunedUnit = Unit & {
     runes: Rune[],
 }
 
-export type Contestant = RunedUnit & {
+export type Contestant = Unit & {
     atb: number,
     hp: number,
     atk: number,
@@ -82,7 +68,7 @@ export type Contestant = RunedUnit & {
     cooldowns: { [string]: number }
 }
 
-function contestant(u: RunedUnit): Contestant {
+function contestant(u: Unit): Contestant {
     return {
         ...u,
         hp: u.max_hp,
@@ -107,8 +93,8 @@ function contestant(u: RunedUnit): Contestant {
 
 
 type BattleStarted = {
-    teamA: RunedUnit[],
-    teamB: RunedUnit[],
+    teamA: Unit[],
+    teamB: Unit[],
 }
 
 export type Targeted = {
@@ -344,7 +330,6 @@ const eventHandlers = {
 function when(event: Event) {
     const handler = eventHandlers[event.name];
     if (handler) {
-        console.log('handle', event.name, event.payload);
         handler.call(this, event.payload);
     } else {
         console.warn(`Can not handle event: ${event.name}`);
@@ -373,7 +358,7 @@ export class GuildWarBattle {
     unit: Contestant;
     winner: number;
 
-    constructor(teamA: RunedUnit[], teamB: RunedUnit[]) {
+    constructor(teamA: Unit[], teamB: Unit[]) {
         this.events = [];
         this.version = 0;
         this.skill_mechanics = new SkillMechanics();

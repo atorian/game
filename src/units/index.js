@@ -11,6 +11,7 @@ export type Passive = {
 export type Skill = Ability | Passive
 
 export type BaseUnit = {
+    element: 'wind' | 'water' | 'fire' | 'light' | 'dark',
     hp: number,
     atk: number,
     def: number,

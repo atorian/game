@@ -109,7 +109,6 @@ type HitConfig = Targeted & {
 }
 
 function configure(conf: string | Object): HitConfig {
-    console.log(conf);
     if (typeof conf === 'string') {
         return {
             target: 'enemy',

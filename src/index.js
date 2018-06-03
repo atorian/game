@@ -183,12 +183,22 @@ const players = {
 };
 
 
+function windAttack30(unit: BaseUnit) {
+    if (unit.element === 'wind') {
+        return {
+            atk: unit.atk * 0.3,
+        }
+    }
+    return {};
+}
+
+
 const battle = new GuildWarBattle(
     [
-        createUnit('bernie', bernard, player.id, [extra_stats['bernie']]),
-        createUnit('bastet', bastet, player.id, [extra_stats['bastet']]),
-        createUnit('lushen1', lushen, player.id, [extra_stats['lushen1']]),
-        createUnit('lushen2', lushen, player.id, [extra_stats['lushen2']]),
+        createUnit('bernie', bernard, player.id, [extra_stats['bernie'], windAttack30(bernard)]),
+        createUnit('bastet', bastet, player.id, [extra_stats['bastet'], windAttack30(bastet)]),
+        createUnit('lushen1', lushen, player.id, [extra_stats['lushen1'], windAttack30(lushen)]),
+        createUnit('lushen2', lushen, player.id, [extra_stats['lushen2'], windAttack30(lushen)]),
     ],
     [
         createUnit('praha', praha, ai.id, [extra_stats['praha']]),
