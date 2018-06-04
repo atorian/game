@@ -3,6 +3,7 @@ import {ActionContext, Contestant, Mechanics} from "../battle";
 import type {HitEvent, Targeted} from "../battle";
 import {ELEMENT_RELATIONS} from "./index";
 import target from './targeting';
+import _ from 'lodash';
 
 export class Multiplier {
     evaluate(raw: string, context: ActionContext): number {
@@ -147,7 +148,7 @@ export class EnemyDmgSystem implements Mechanics {
 
         const raw_dmg = this.formula.evaluate(config.multiplier, context);
 
-        return target(config.target, context).map(target => {
+        return target(config.target, context).map((target:Contestant) => {
 
             const strategy = this.hit_strategy_factory.create({
                 ...context,
@@ -158,13 +159,14 @@ export class EnemyDmgSystem implements Mechanics {
             // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
 
             const dmgReduction = 1000 / (1140 + 3.5 * (config.ignore_def ? 0 : target.def));
+            const randomFunctor = 1 + (_.random(0,10) - 5) / 100;
 
             return {
                 name: 'hit',
                 payload: {
                     target: target.id,
                     type: strategy.name,
-                    damage: Math.floor(multiplied_dmg * dmgReduction),
+                    damage: Math.floor(multiplied_dmg * dmgReduction * randomFunctor),
                 }
             };
         });
