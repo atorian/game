@@ -252,6 +252,7 @@ const eventHandlers = {
             .map(u => u.player);
 
         this.units[event.target].atb = 0;
+        this.units[event.target].effects = [];
 
         if (_.uniq(players).length === 1) {
             causes.call(this, {
@@ -338,7 +339,7 @@ function when(event: Event) {
 
 function causes(event) {
     this.events.push(event);
-    // todo: this.skill_mechanics.apply(m => m.handle(event));
+    // todo: this.mechanics.apply(m => m.handle(event));
     this.applyEvent(event);
 }
 
@@ -361,53 +362,7 @@ export class GuildWarBattle {
     constructor(teamA: Unit[], teamB: Unit[]) {
         this.events = [];
         this.version = 0;
-        this.skill_mechanics = new SkillMechanics();
-        this.skill_mechanics.set('enemy_dmg', new EnemyDmgSystem(
-            new HitStrategyFactory(roll),
-            new Multiplier()
-        ));
-
-        for (const debuf of [
-            'def_break',
-            'atk_break',
-            'slow',
-            'glancing',
-            'brand',
-            'block_buf',
-            'unrecoverable',
-            'taunt',
-            'oblivion',
-            'freeze',
-            'stun',
-            'sleep',
-            'silence',
-        ]) {
-            this.skill_mechanics.set(
-                debuf,
-                HarmfulEffectsFactory.create(debuf)
-            );
-        }
-
-        this.skill_mechanics.set(
-            'random_debuf',
-            new RandomHarmfulEffects(
-                HarmfulEffectsFactory
-            )
-        );
-
-        this.skill_mechanics.set('atb_boost', new AtbManipulation('increase'));
-        this.skill_mechanics.set('atb_decrease', new AtbManipulation('decrease'));
-        // todo: add `dot` and `bomb` skill_mechanics
-
-
-        for (const buf in BUFFS) {
-            this.skill_mechanics.set(buf, new BeneficialEffects(BUFFS[buf]));
-        }
-
-        this.skill_mechanics.set('strip', new Strip(
-            createResistPolicy(roll),
-            roll,
-        ));
+        this.mechanics = new SkillMechanics();
 
         causes.call(this, {
             name: 'battle_started',
@@ -429,6 +384,7 @@ export class GuildWarBattle {
 
     next() {
 
+        // todo: check 2 monsters with same skill. first placed should take a turn
         while (!this.unit) {
             causes.call(this, {
                 name: 'tick',
@@ -478,7 +434,7 @@ export class GuildWarBattle {
 
         const skill = this.unit.skills.find(skill => skill.id === skill_id);
 
-        const events = this.skill_mechanics.apply({
+        const events = this.mechanics.apply({
             battlefield: this.units,
             caster: this.unit,
             target: this.units[target_id],
@@ -512,6 +468,52 @@ class SkillMechanics {
 
     constructor() {
         this.mechanics = new Map();
+        this.mechanics.set('enemy_dmg', new EnemyDmgSystem(
+            new HitStrategyFactory(roll),
+            new Multiplier()
+        ));
+
+        for (const debuf of [
+            'def_break',
+            'atk_break',
+            'slow',
+            'glancing',
+            'brand',
+            'block_buf',
+            'unrecoverable',
+            'taunt',
+            'oblivion',
+            'freeze',
+            'stun',
+            'sleep',
+            'silence',
+        ]) {
+            this.mechanics.set(
+                debuf,
+                HarmfulEffectsFactory.create(debuf)
+            );
+        }
+
+        this.mechanics.set(
+            'random_debuf',
+            new RandomHarmfulEffects(
+                HarmfulEffectsFactory
+            )
+        );
+
+        this.mechanics.set('atb_boost', new AtbManipulation('increase'));
+        this.mechanics.set('atb_decrease', new AtbManipulation('decrease'));
+        // todo: add `dot` and `bomb` mechanics
+
+
+        for (const buf in BUFFS) {
+            this.mechanics.set(buf, new BeneficialEffects(BUFFS[buf]));
+        }
+
+        this.mechanics.set('strip', new Strip(
+            createResistPolicy(roll),
+            roll,
+        ));
     }
 
     set(id, mechanic) {
@@ -534,7 +536,7 @@ class SkillMechanics {
                     ]
                 }
 
-                console.debug('unknown skill_mechanics: ', mechanic_id);
+                console.debug('unknown mechanics: ', mechanic_id);
                 return accumulated_events;
 
             }, events);

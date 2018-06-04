@@ -92,9 +92,11 @@ export class HitStrategyFactory {
     create(context: ActionContext): DamageStrategy {
         // todo: add elemental king effect = always advantage
         const glancing_chance = ELEMENT_RELATIONS[context.caster.element].weak === context.target.element ? 15 : 0;
+        const crit_mod = hasAdvantage(context.caster, context.target) ? 15 : 0;
+
         if (this.roll() <= (glancing_chance + context.caster.glancing_mod)) {
             return new GlancingDamageStrategy(context);
-        } else if (this.roll() <= context.caster.cr) {
+        } else if (this.roll() <= context.caster.cr + crit_mod) {
             return new CritDamageStrategy(context);
         } else if (hasAdvantage(context.caster, context.target) && this.roll() <= 15) {
             return new CrushingDamageStrategy(context);
