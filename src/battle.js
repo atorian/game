@@ -7,6 +7,8 @@ import {AtbManipulation} from "./mechanics/atb-effects";
 import {Strip} from "./mechanics/strip";
 import {createResistPolicy} from "./mechanics/harmful-effects";
 import {BaseUnit} from "./units";
+import BattleMechanics from "./battle-mechanics";
+import EventEmitter from 'events';
 
 export type RuneSet =
     'Energy'
@@ -50,7 +52,7 @@ export type Unit = BaseUnit & {
     max_cd: number,
     max_acc: number,
     max_res: number,
-    runes: Rune[],
+    rune_sets: RuneSet[],
 }
 
 export type Contestant = Unit & {
@@ -325,6 +327,13 @@ const eventHandlers = {
             ...target,
             atb: target.atb + event.value,
         }
+    },
+    nemezis({unit, value}) {
+        const target = this.units[unit];
+        this.units[unit] = {
+            ...target,
+            atb: target.atb + value,
+        }
     }
 };
 
@@ -339,7 +348,6 @@ function when(event: Event) {
 
 function causes(event) {
     this.events.push(event);
-    // todo: this.mechanics.apply(m => m.handle(event));
     this.applyEvent(event);
 }
 
@@ -354,7 +362,7 @@ function byReadiness(uA: Contestant, uB: Contestant) {
 }
 
 
-export class GuildWarBattle {
+export class Battle {
     units: Contestant[];
     unit: Contestant;
     winner: number;
@@ -362,14 +370,25 @@ export class GuildWarBattle {
     constructor(teamA: Unit[], teamB: Unit[]) {
         this.events = [];
         this.version = 0;
-        this.mechanics = new SkillMechanics();
+        this.dispatcher = new EventEmitter();
+        this.skill_mechanics = new SkillMechanics();
 
-        causes.call(this, {
-            name: 'battle_started',
-            payload: {
-                teamA,
-                teamB,
-            },
+        Object.keys(eventHandlers).forEach(event => {
+            this.dispatcher.on(event, (payload) => {
+                console.log('event', event, payload);
+                causes.call(this, {
+                    name: event,
+                    payload
+                })
+            })
+        });
+
+        this.battle_mechanics = new BattleMechanics();
+        this.battle_mechanics.subscribe(this);
+
+        this.dispatcher.emit('battle_started', {
+            teamA,
+            teamB,
         });
     }
 
@@ -386,16 +405,16 @@ export class GuildWarBattle {
 
         // todo: check 2 monsters with same skill. first placed should take a turn
         while (!this.unit) {
-            causes.call(this, {
-                name: 'tick',
-                payload: Object.values(this.units)
+            this.dispatcher.emit(
+                'tick',
+                Object.values(this.units)
                     .reduce(function (payload: { [string]: number }, unit: Contestant) {
                         return {
                             ...payload,
                             [unit.id]: 1 * (unit.spd * 0.07).toFixed(2),
                         }
                     }, {})
-            });
+            );
 
             const nextUnit = Object.values(this.units)
                 .filter(isReady)
@@ -404,11 +423,8 @@ export class GuildWarBattle {
 
             if (nextUnit) {
                 // todo: use unit id
-                causes.call(this, {
-                    name: 'turn_started',
-                    payload: {
-                        target: nextUnit.id,
-                    }
+                this.dispatcher.emit('turn_started', {
+                    target: nextUnit.id,
                 })
             }
         }
@@ -424,30 +440,24 @@ export class GuildWarBattle {
             throw new Error('Cheater!!!');
         }
 
-        causes.call(this, {
-            name: 'skill_used',
-            payload: {
-                unit_id: this.unit.id,
-                skill_id,
-            }
+        this.dispatcher.emit('skill_used', {
+            unit_id: this.unit.id,
+            skill_id,
         });
 
         const skill = this.unit.skills.find(skill => skill.id === skill_id);
 
-        const events = this.mechanics.apply({
+        const events = this.skill_mechanics.apply({
             battlefield: this.units,
             caster: this.unit,
             target: this.units[target_id],
             skill: skill,
         });
 
-        events.forEach(causes.bind(this));
+        events.forEach(e => this.dispatcher.emit(e.name, e.payload));
 
-        causes.call(this, {
-            name: 'turn_ended',
-            payload: {
-                unit_id: this.unit.id,
-            }
+        this.dispatcher.emit('turn_ended', {
+            unit_id: this.unit.id,
         });
 
         if (!this.ended) {
@@ -462,7 +472,6 @@ export type ActionContext = {
     target: Contestant,
     skill: Skill
 }
-
 
 class SkillMechanics {
 
@@ -503,7 +512,7 @@ class SkillMechanics {
 
         this.mechanics.set('atb_boost', new AtbManipulation('increase'));
         this.mechanics.set('atb_decrease', new AtbManipulation('decrease'));
-        // todo: add `dot` and `bomb` mechanics
+        // todo: add `dot` and `bomb` skill_mechanics
 
 
         for (const buf in BUFFS) {
@@ -536,7 +545,7 @@ class SkillMechanics {
                     ]
                 }
 
-                console.debug('unknown mechanics: ', mechanic_id);
+                console.debug('unknown skill_mechanics: ', mechanic_id);
                 return accumulated_events;
 
             }, events);

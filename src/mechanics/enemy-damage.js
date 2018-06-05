@@ -159,7 +159,7 @@ export class EnemyDmgSystem implements Mechanics {
             // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
 
             const dmgReduction = 1000 / (1140 + 3.5 * (config.ignore_def ? 0 : target.def));
-            const randomFunctor = 1 + (_.random(0,10) - 5) / 100;
+            const randomFunctor = 1 + (_.random(0,10) - 2) / 100;
 
             return {
                 name: 'hit',

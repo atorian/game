@@ -1,4 +1,4 @@
-import {GuildWarBattle} from "./battle";
+import {Battle} from "./battle";
 import type {Ability, BaseUnit} from "./units";
 import bernard from './units/bernard';
 import slime from './units/slime';
@@ -35,7 +35,7 @@ type Action = {
 interface Player {
     id: number;
 
-    requestAction(skills: Ability[], battle: GuildWarBattle): Action;
+    requestAction(skills: Ability[], battle: Battle): Action;
 }
 
 type Stats = {
@@ -49,7 +49,7 @@ type Stats = {
     acc?: number,
 }
 
-function createUnit(id, base, player_id, bonus_stats: Stats[] = []) {
+function createUnit(id, base, player_id, rune_sets, bonus_stats: Stats[] = []) {
     const stats = ['hp', 'atk', 'def', 'spd', 'cr', 'cd', 'res', 'acc'];
     const base_stats = stats.reduce((baseStats, name) => {
         return {
@@ -74,6 +74,7 @@ function createUnit(id, base, player_id, bonus_stats: Stats[] = []) {
                 [`max_${name}`]: base[name] + _.sumBy(bonus_stats, s => s[name] || 0),
             }
         }, {}),
+        rune_sets: rune_sets,
     }
 }
 
@@ -129,7 +130,7 @@ const target_strategies = {
 
 const player: Player = {
     id: 1,
-    async requestAction(skills: Ability[], battle: GuildWarBattle): Action {
+    async requestAction(skills: Ability[], battle: Battle): Action {
 
         io.section(`Current Unit ${battle.unit.name} of player ${battle.unit.player}`);
 
@@ -167,7 +168,7 @@ const player: Player = {
 
 const ai: Player = {
     id: 2,
-    requestAction(skills: Ability[], battle: GuildWarBattle): Action {
+    requestAction(skills: Ability[], battle: Battle): Action {
         console.log('AI got a turn');
 
 
@@ -220,27 +221,27 @@ function fightSetBonus(unit: BaseUnit, numSets: number = 1) {
 }
 
 
-const battle = new GuildWarBattle(
+const battle = new Battle(
     [
-        createUnit('bernie', bernard, player.id, [
+        createUnit('bernie', bernard, player.id, ['swift'], [
             extra_stats['bernie'],
             windAttack30(bernard),
             fightSetBonus(bernard, 2),
             ...totems.map(f => f(bernard)),
         ]),
-        createUnit('bastet', bastet, player.id, [
+        createUnit('bastet', bastet, player.id, ['swift'], [
             extra_stats['bastet'],
             windAttack30(bastet),
             fightSetBonus(bastet, 2),
             ...totems.map(f => f(bastet)),
         ]),
-        createUnit('lushen1', lushen, player.id, [
+        createUnit('lushen1', lushen, player.id, ['fight', 'fight', 'will'], [
             extra_stats['lushen1'],
             windAttack30(lushen),
             fightSetBonus(lushen, 2),
             ...totems.map(f => f(lushen)),
         ]),
-        createUnit('lushen2', lushen, player.id, [
+        createUnit('lushen2', lushen, player.id, ['rage', 'will'], [
             extra_stats['lushen2'],
             windAttack30(lushen),
             fightSetBonus(lushen, 2),
@@ -248,7 +249,7 @@ const battle = new GuildWarBattle(
         ]),
     ],
     [
-        createUnit('praha', praha, ai.id, [extra_stats['praha']]),
+        createUnit('praha', praha, ai.id, ['nemezis', 'nemezis', 'will'], [extra_stats['praha']]),
     ]
 );
 
@@ -277,7 +278,7 @@ function effect(e) {
     return `${BUFS[e.effect]}+[${e.duration}]`;
 }
 
-function renderBattleState(battle: GuildWarBattle, player: Player) {
+function renderBattleState(battle: Battle, player: Player) {
     const units = Object.values(battle.units).filter(u => u.player === player.id);
     const state = new Table({
         head: units.map(u => u.name),
@@ -285,8 +286,8 @@ function renderBattleState(battle: GuildWarBattle, player: Player) {
     });
 
     state.push(
-        units.map(u => u.hp / u.max_hp * 100),
-        units.map(u => Math.min(u.atb, 100).toFixed(0)),
+        units.map(u => u.hp),
+        units.map(u => u.atb.toFixed(0)),
         units.map(u => u.effects.map(e => effect(e)).join(',')),
     );
 
