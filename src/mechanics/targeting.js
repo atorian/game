@@ -39,8 +39,10 @@ export function aoe_ally(context: ActionContext) {
 }
 
 export function not_self(context: ActionContext) {
+
     const targets = Object.values(context.battlefield)
         .filter(unit => {
+            console.assert(unit.player);
             return unit.player === context.caster.player
                 && unit.id !== context.caster.id;
         });

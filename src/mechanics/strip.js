@@ -12,7 +12,7 @@ type Irresistable = {
 type WithChance = {
     chance?: number,
 }
-type StripConf = Targeted & Irresistable & WithChance & {
+type StripConf = Targeted & {
     amount: number | 'all'
 };
 

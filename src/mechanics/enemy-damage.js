@@ -115,7 +115,6 @@ type HitConfig = Targeted & {
 function configure(conf: string | Object): HitConfig {
     if (typeof conf === 'string') {
         return {
-            target: 'enemy',
             multiplier: conf,
             ignore_def: false,
             ...conf,
@@ -127,7 +126,6 @@ function configure(conf: string | Object): HitConfig {
     }
 
     return {
-        target: 'enemy',
         ignore_def: false,
         ...conf,
     }
@@ -145,11 +143,9 @@ export class EnemyDmgSystem implements Mechanics {
 
     apply(context: ActionContext, step, events: Event[] = []): ?HitEvent[] {
         let config = configure(step);
-
         const raw_dmg = this.formula.evaluate(config.multiplier, context);
 
         return target(config.target, context).map((target:Contestant) => {
-
             const strategy = this.hit_strategy_factory.create({
                 ...context,
                 target,

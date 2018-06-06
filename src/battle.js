@@ -9,6 +9,8 @@ import {createResistPolicy} from "./mechanics/harmful-effects";
 import {BaseUnit} from "./units";
 import BattleMechanics from "./battle-mechanics";
 import EventEmitter from 'events';
+import {Heal} from "./mechanics/heal";
+import {Revive} from "./mechanics/revive";
 
 export type RuneSet =
     'Energy'
@@ -67,6 +69,7 @@ export type Contestant = Unit & {
     acc: number,
     glancing_mod: number,
     effects: TemporalEffect[],
+    is_revivable: boolean,
     cooldowns: { [string]: number }
 }
 
@@ -84,6 +87,7 @@ function contestant(u: Unit): Contestant {
         atb: 0,
         effects: [],
         glancing_mod: 0,
+        is_revivable: true,
         cooldowns: u.skills.reduce((cooldowns, skill) => {
             return {
                 ...cooldowns,
@@ -253,8 +257,11 @@ const eventHandlers = {
             .filter(u => u.hp > 0)
             .map(u => u.player);
 
-        this.units[event.target].atb = 0;
-        this.units[event.target].effects = [];
+        this.units[event.target] = {
+            ...this.units[event.target],
+            atb: 0,
+            effects: []
+        };
 
         if (_.uniq(players).length === 1) {
             causes.call(this, {
@@ -334,6 +341,28 @@ const eventHandlers = {
             ...target,
             atb: target.atb + value,
         }
+    },
+    heal({target, value}) {
+        const unit = this.units[target];
+        this.units[target] = {
+            ...unit,
+            hp: Math.min(unit.hp + value, unit.max_hp),
+        }
+    },
+    revived({target, hp}) {
+        const unit = this.units[target];
+        this.units[target] = {
+            ...unit,
+            effects:[],
+            hp,
+        }
+    },
+    guard_triggered(event) {
+        this.pending_actions.push(event);
+        const {unit_id, skill_id} = event;
+        this.units[unit_id].cooldowns[skill_id] = this.units[unit_id].skills
+            .find(s => s.id === skill_id)
+            .cooltime || 0;
     }
 };
 
@@ -361,21 +390,29 @@ function byReadiness(uA: Contestant, uB: Contestant) {
     return uA.atb - uB.atb;
 }
 
+type Action = {
+    unit_id: string,
+    skill_id: string,
+    guard?: boolean,
+    target_id?: string,
+}
 
 export class Battle {
     units: Contestant[];
     unit: Contestant;
     winner: number;
+    pending_actions: Action[];
+    reacting: boolean = false;
 
     constructor(teamA: Unit[], teamB: Unit[]) {
         this.events = [];
+        this.pending_actions = [];
         this.version = 0;
         this.dispatcher = new EventEmitter();
         this.skill_mechanics = new SkillMechanics();
 
         Object.keys(eventHandlers).forEach(event => {
             this.dispatcher.on(event, (payload) => {
-                console.log('event', event, payload);
                 causes.call(this, {
                     name: event,
                     payload
@@ -408,6 +445,7 @@ export class Battle {
             this.dispatcher.emit(
                 'tick',
                 Object.values(this.units)
+                    .filter(unit => unit.hp > 0)
                     .reduce(function (payload: { [string]: number }, unit: Contestant) {
                         return {
                             ...payload,
@@ -430,8 +468,31 @@ export class Battle {
         }
     }
 
+    cast(skill, target=null, caster=null) {
+        // todo: emit start action
+        this.skill_mechanics.apply({
+            battlefield: this.units,
+            caster: caster || this.unit,
+            skill,
+            target,
+        }).forEach(e => this.dispatcher.emit(e.name, e.payload));
+
+        this.reacting = true;
+        this.pending_actions.forEach((action) => {
+            const skill = this.units[action.unit_id].skills.find(s => s.id === action.skill_id);
+            this.skill_mechanics.apply({
+                battlefield: this.units,
+                caster: this.units[action.unit_id],
+                skill: action.guard ? {...skill, ...skill.guard} : skill,
+                target: action.target ? this.units[action.target] : null,
+            }).forEach(e => this.dispatcher.emit(e.name, e.payload));
+        });
+        this.pending_actions = [];
+
+        // todo: emit action ended
+    }
+
     useSkill(player, skill_id, target_id) {
-        // todo: validate target
         if (this.unit.player !== player) {
             throw new Error('Cheater!!!');
         }
@@ -440,21 +501,19 @@ export class Battle {
             throw new Error('Cheater!!!');
         }
 
+        const skill = this.unit.skills.find(skill => skill.id === skill_id);
+
+        if (skill.passive) {
+            throw new Error('You are not allowed to trigger this skill.');
+        }
+
         this.dispatcher.emit('skill_used', {
             unit_id: this.unit.id,
             skill_id,
+            target_id,
         });
 
-        const skill = this.unit.skills.find(skill => skill.id === skill_id);
-
-        const events = this.skill_mechanics.apply({
-            battlefield: this.units,
-            caster: this.unit,
-            target: this.units[target_id],
-            skill: skill,
-        });
-
-        events.forEach(e => this.dispatcher.emit(e.name, e.payload));
+        this.cast(skill, this.units[target_id]);
 
         this.dispatcher.emit('turn_ended', {
             unit_id: this.unit.id,
@@ -512,6 +571,8 @@ class SkillMechanics {
 
         this.mechanics.set('atb_boost', new AtbManipulation('increase'));
         this.mechanics.set('atb_decrease', new AtbManipulation('decrease'));
+        this.mechanics.set('heal', new Heal(new Multiplier()));
+        this.mechanics.set('revive', new Revive(new Multiplier()));
         // todo: add `dot` and `bomb` skill_mechanics
 
 
@@ -537,11 +598,11 @@ class SkillMechanics {
                 if (this.mechanics.has(mechanic_id)) {
                     return [
                         ...accumulated_events,
-                        ...this.mechanics.get(mechanic_id).apply(
+                        ...(this.mechanics.get(mechanic_id).apply(
                             context,
                             step[mechanic_id],
                             accumulated_events
-                        ),
+                        ) || []),
                     ]
                 }
 

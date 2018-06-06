@@ -11,6 +11,7 @@ const extra_stats = require('../stats.json');
 import _ from 'lodash';
 import praha from "./units/praha";
 import bastet from "./units/bastet";
+import perna from "./units/perna";
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -250,6 +251,7 @@ const battle = new Battle(
     ],
     [
         createUnit('praha', praha, ai.id, ['nemezis', 'nemezis', 'will'], [extra_stats['praha']]),
+        createUnit('perna', perna, ai.id, ['violent'], [extra_stats['perna']]),
     ]
 );
 
