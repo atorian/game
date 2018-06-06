@@ -240,15 +240,13 @@ const eventHandlers = {
         });
 
 
-        const deadUnits = Object.values(this.units).filter(u => u.hp === 0);
         this.unit = null;
+
+        const deadUnits = Object.values(this.units).filter(u => u.hp === 0);
         deadUnits.forEach((u) => {
-            causes.call(this, {
-                name: 'unit_died',
-                payload: {
-                    target: u.id,
-                }
-            })
+            this.dispatcher.emit('unit_died',{
+                target: u.id,
+            });
         });
 
         const players = Object.values(this.units)
@@ -256,12 +254,9 @@ const eventHandlers = {
             .map(u => u.player);
 
         if (_.uniq(players).length === 1) {
-            causes.call(this, {
-                name: 'battle_ended',
-                payload: {
-                    winner: players[0],
-                }
-            })
+            this.dispatcher.emit('battle_ended', {
+                winner: players[0],
+            });
         }
     },
     unit_died(event: Targeted) {

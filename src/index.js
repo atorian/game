@@ -314,9 +314,7 @@ function battleState(battle: Battle, player: Player) {
     while (!battle.ended) {
         battle.next();
 
-        // io.section(`Player ${ai.id} team`);
         io.table(...battleState(battle, ai));
-        // io.section(`Player ${player.id} team`);
         io.table(...battleState(battle, player));
 
         const currentPlayer = players[battle.unit.player];
@@ -332,7 +330,6 @@ function battleState(battle: Battle, player: Player) {
 
         const last_turn_events = battle.events.slice(
             battle.events.indexOf(battle.events.filter(e => e.name === 'turn_started').pop()),
-            battle.events.indexOf(battle.events.filter(e => e.name === 'turn_ended').pop())
         ).filter(e => !['turn_started', 'skill_used'].includes(e.name));
 
         io.listing(

@@ -23,10 +23,17 @@ type KnownDebuf = TemporalEffect & Irresistable & WithChance;
 type DebufConf = KnownDebuf | RandomDebuf;
 
 function configure(conf: any): DebufConf {
+
+    if (typeof cont === 'number') {
+        return {
+            duration: cont,
+            irresistable: false,
+        }
+    }
+
     return {
         duration: 1,
         irresistable: false,
-        target: 'enemy',
         ...conf,
     }
 }
