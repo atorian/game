@@ -251,17 +251,9 @@ const eventHandlers = {
             })
         });
 
-    },
-    unit_died(event: Targeted) {
         const players = Object.values(this.units)
             .filter(u => u.hp > 0)
             .map(u => u.player);
-
-        this.units[event.target] = {
-            ...this.units[event.target],
-            atb: 0,
-            effects: []
-        };
 
         if (_.uniq(players).length === 1) {
             causes.call(this, {
@@ -271,6 +263,13 @@ const eventHandlers = {
                 }
             })
         }
+    },
+    unit_died(event: Targeted) {
+        this.units[event.target] = {
+            ...this.units[event.target],
+            atb: 0,
+            effects: []
+        };
     },
     battle_ended(event) {
         this.winner = event.winner;
@@ -363,7 +362,7 @@ const eventHandlers = {
         this.units[unit_id].cooldowns[skill_id] = this.units[unit_id].skills
             .find(s => s.id === skill_id)
             .cooltime || 0;
-    }
+    },
 };
 
 function when(event: Event) {
@@ -518,10 +517,6 @@ export class Battle {
         this.dispatcher.emit('turn_ended', {
             unit_id: this.unit.id,
         });
-
-        if (!this.ended) {
-            this.next();
-        }
     }
 }
 

@@ -54,33 +54,35 @@ export class HarmfulEffects implements Mechanics {
         const last_hit = (events.filter(e => e.name === 'hit').pop(): ?HitEvent);
 
         if (!last_hit || last_hit.payload.type !== 'glancing') {
-            return target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
+            return target(config.target, context)
+                .filter(u => u.hp)
+                .reduce((mechanics_events: [], target: Contestant) => {
 
-                    if (config.chance && this.roll() > config.chance) {
-                        return mechanics_events;
-                    }
-
-                    if (config.irresistable || !this.resist(context.caster.acc, target.res)) {
-                        return [...mechanics_events, {
-                            name: 'debuffed',
-                            payload: {
-                                ...this.debuf(target),
-                                target: target.id,
-                                duration: config.duration,
-                            },
-                        }];
-                    }
-
-                    return [...mechanics_events, {
-                        name: 'resisted',
-                        payload: {
-                            target: target.id,
-                            effect: config.effect,
+                        if (config.chance && this.roll() > config.chance) {
+                            return mechanics_events;
                         }
-                    }];
-                },
-                []
-            )
+
+                        if (config.irresistable || !this.resist(context.caster.acc, target.res)) {
+                            return [...mechanics_events, {
+                                name: 'debuffed',
+                                payload: {
+                                    ...this.debuf(target),
+                                    target: target.id,
+                                    duration: config.duration,
+                                },
+                            }];
+                        }
+
+                        return [...mechanics_events, {
+                            name: 'resisted',
+                            payload: {
+                                target: target.id,
+                                effect: config.effect,
+                            }
+                        }];
+                    },
+                    []
+                )
         }
     }
 }

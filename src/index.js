@@ -12,6 +12,7 @@ import _ from 'lodash';
 import praha from "./units/praha";
 import bastet from "./units/bastet";
 import perna from "./units/perna";
+import psamathe from "./units/psamathe";
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -146,19 +147,29 @@ const player: Player = {
         const skill_idx = await io.choice('Select skill', skillChoices);
         const skill = skills[skill_idx - 1];
 
-
         const valid_targets = Object.values(battle.units).filter(
             target_strategies[skill.target](battle)
-        );
+        ).filter(t => t.hp);
 
-        const target_choices = Object.keys(valid_targets).reduce((choices, unit_idx) => {
-            return {
-                ...choices,
-                [1 + 1 * unit_idx]: valid_targets[unit_idx].name,
+
+        let target;
+        if (skill.target.indexOf('aoe') === -1) {
+            // single target skill
+            const target_choices = Object.keys(valid_targets).reduce((choices, unit_idx) => {
+                return {
+                    ...choices,
+                    [1 + 1 * unit_idx]: valid_targets[unit_idx].name,
+                }
+            }, {});
+            const target_idx = await io.choice('Select target', target_choices);
+            target = valid_targets[target_idx - 1];
+        } else {
+            if (skill.target.indexOf('enemy') !== -1) {
+                target = valid_targets[0];
+            } else {
+                target = battle.unit
             }
-        }, {});
-        const target_idx = await io.choice('Select target', target_choices);
-        const target = valid_targets[target_idx - 1];
+        }
 
         return {
             skill: skill.id,
@@ -171,7 +182,6 @@ const ai: Player = {
     id: 2,
     requestAction(skills: Ability[], battle: Battle): Action {
         console.log('AI got a turn');
-
 
         return {
             skill: skills[0].id,
@@ -250,6 +260,7 @@ const battle = new Battle(
         ]),
     ],
     [
+        createUnit('psam', psamathe, ai.id, ['nemezis', 'despair'], [extra_stats['psam']]),
         createUnit('praha', praha, ai.id, ['nemezis', 'nemezis', 'will'], [extra_stats['praha']]),
         createUnit('perna', perna, ai.id, ['violent'], [extra_stats['perna']]),
     ]
@@ -280,33 +291,33 @@ function effect(e) {
     return `${BUFS[e.effect]}+[${e.duration}]`;
 }
 
-function renderBattleState(battle: Battle, player: Player) {
+function battleState(battle: Battle, player: Player) {
     const units = Object.values(battle.units).filter(u => u.player === player.id);
-    const state = new Table({
-        head: units.map(u => u.name),
-        colWidths: new Array(units.length).fill(30),
-    });
-
-    state.push(
-        units.map(u => u.hp),
-        units.map(u => u.atb.toFixed(0)),
-        units.map(u => u.effects.map(e => effect(e)).join(',')),
-    );
-
-    return state.toString();
+    return [
+        units.map(u => u.name),
+        [
+            units.map(u => u.hp),
+            units.map(u => u.atb.toFixed(0)),
+            units.map(u => u.effects.map(e => effect(e)).join(',')),
+        ]
+    ];
 }
+
+
 
 (async () => {
 
     io.title('Battle Started');
 
+    battle.dispatcher.on('.', console.log);
+
     while (!battle.ended) {
         battle.next();
 
-        io.section(`Player ${ai.id} team`);
-        io.writeln(renderBattleState(battle, ai));
-        io.section(`Player ${player.id} team`);
-        io.writeln(renderBattleState(battle, player));
+        // io.section(`Player ${ai.id} team`);
+        io.table(...battleState(battle, ai));
+        // io.section(`Player ${player.id} team`);
+        io.table(...battleState(battle, player));
 
         const currentPlayer = players[battle.unit.player];
 
@@ -314,18 +325,22 @@ function renderBattleState(battle: Battle, player: Player) {
             battle.unit.skills,
             battle,
         );
+
         io.success(`Action: ${battle.unit.name} uses skill ${action.skill} on ${battle.units[action.target].name}`);
 
         battle.useSkill(currentPlayer.id, action.skill, action.target);
+
+        const last_turn_events = battle.events.slice(
+            battle.events.indexOf(battle.events.filter(e => e.name === 'turn_started').pop()),
+            battle.events.indexOf(battle.events.filter(e => e.name === 'turn_ended').pop())
+        ).filter(e => !['turn_started', 'skill_used'].includes(e.name));
+
+        io.listing(
+            last_turn_events.map(e => `${e.name}: ${JSON.stringify(e.payload)}`),
+        );
     }
 
-    io.section(`Player ${ai.id} team`);
-    io.writeln(renderBattleState(battle, ai));
-    io.section(`Player ${player.id} team`);
-    io.writeln(renderBattleState(battle, player));
     io.success(`Battle ended. Player ${battle.winner} won!`);
-
-    console.log(battle.events);
 })();
 
 

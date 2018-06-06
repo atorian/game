@@ -49,9 +49,9 @@ export class Heal implements Mechanics {
 
     apply(context: ActionContext, step: HealConf, events?: Event[] = []): ?StripEvent[] {
         const config: HealConf = configure(step);
-        return target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
-
-            if (target.hp > 0) {
+        return target(config.target, context)
+            .filter(u => u.hp)
+            .reduce((mechanics_events: [], target: Contestant) => {
 
                 const is_unrecoverable: boolean = target.effects.filter(e => e.effect === 'unrecoverable').length > 0;
 
@@ -60,7 +60,6 @@ export class Heal implements Mechanics {
                         name: 'unrecoverable',
                     }];
                 }
-
 
                 return [...mechanics_events, {
                     name: 'heal',
@@ -72,10 +71,7 @@ export class Heal implements Mechanics {
                         }),
                     }
                 }];
-            }
 
-            return mechanics_events;
-
-        }, []);
+            }, []);
     }
 }

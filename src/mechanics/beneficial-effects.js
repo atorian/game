@@ -8,10 +8,7 @@ type Buf = TemporalEffect & {
 }
 
 function configure(conf: number | Object): Buf {
-    console.log(conf, typeof conf);
-
     if (typeof conf === 'number') {
-
         return {
             duration: conf,
         }

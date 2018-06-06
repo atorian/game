@@ -145,26 +145,28 @@ export class EnemyDmgSystem implements Mechanics {
         let config = configure(step);
         const raw_dmg = this.formula.evaluate(config.multiplier, context);
 
-        return target(config.target, context).map((target:Contestant) => {
-            const strategy = this.hit_strategy_factory.create({
-                ...context,
-                target,
+        return target(config.target, context)
+            .filter(u => u.hp)
+            .map((target: Contestant) => {
+                const strategy = this.hit_strategy_factory.create({
+                    ...context,
+                    target,
+                });
+
+                const multiplied_dmg = strategy.apply(raw_dmg);
+                // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
+
+                const dmgReduction = 1000 / (1140 + 3.5 * (config.ignore_def ? 0 : target.def));
+                const randomFunctor = 1 + (_.random(0, 10) - 2) / 100;
+
+                return {
+                    name: 'hit',
+                    payload: {
+                        target: target.id,
+                        type: strategy.name,
+                        damage: Math.floor(multiplied_dmg * dmgReduction * randomFunctor),
+                    }
+                };
             });
-
-            const multiplied_dmg = strategy.apply(raw_dmg);
-            // todo: implement modifiers eg. branding, Molly's passive, glancing debuf, etc.
-
-            const dmgReduction = 1000 / (1140 + 3.5 * (config.ignore_def ? 0 : target.def));
-            const randomFunctor = 1 + (_.random(0,10) - 2) / 100;
-
-            return {
-                name: 'hit',
-                payload: {
-                    target: target.id,
-                    type: strategy.name,
-                    damage: Math.floor(multiplied_dmg * dmgReduction * randomFunctor),
-                }
-            };
-        });
     }
 }

@@ -30,7 +30,7 @@ export default {
             power: 15,
             chance: 25,
             cooltime: 4,
-            target: 'enemy',
+            target: 'aoe_enemy',
             iterations: [
                 {
                     enemy_dmg: 'self.atk * 1',

@@ -61,7 +61,7 @@ export default {
                 iterations: [
                     {
                         revive: {
-                            hp: 'target.max_hp * 0.3',
+                            heal: 'self.max_hp * 0.3',
                         }
                     },
                     {
