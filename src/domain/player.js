@@ -14,9 +14,7 @@ export class Player {
             { stat: 'cd', value: 25 },
         ];
         this.gw_totems = [];
-        this.units = [/** units summoned by user */];
-        this.builds = [];
-        this.runes = [];
+        this.presets = [/** units summoned by user */];
     }
 }
 

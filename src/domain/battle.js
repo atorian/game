@@ -4,7 +4,7 @@ import BattleMechanics from "./battle-mechanics";
 import SkillMechanics from "./skill-mechanics";
 import type {Contestant, Effect, StatDecrease, Targeted, TemporalEffect, Unit} from "./index";
 
-function contestant(u: Unit): Contestant {
+export function contestant(u: Unit): Contestant {
     return {
         ...u,
         max_hp: u.hp,
@@ -391,12 +391,9 @@ export class Battle {
     }
 
     next() {
-        // todo: end turn here + vio procs
-        // todo: check 2 monsters with same speed. first placed should take a turn
-
         if (this.next_unit) {
             this.dispatcher.emit('turn_started', {
-                target: this.unit.id,
+                target: this.next_unit,
             });
         } else {
             while (!this.unit) {

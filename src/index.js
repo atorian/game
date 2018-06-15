@@ -1,8 +1,8 @@
+import _ from 'lodash';
 import {Battle} from "./domain/battle";
 import {SymfonyStyle} from 'symfony-style-console';
 import type {Ability} from "./domain";
-import TeamBuilder, {startBattle} from "./battle_preparation";
-import _ from 'lodash';
+import TeamBuilder, {startBattle} from "./domain/battle_preparation";
 
 const presets = require('../stats.json');
 
@@ -178,14 +178,14 @@ const BUFS = {
     'def_buf': 'D',
     'atk_buf': 'A',
     'haste': 'S',
-    'hot': 'X',
+    'hot': 'T',
     'anti_crit': 'C',
 };
 
 const DEBUFS = {
     'def_break': 'D',
     'atk_break': 'A',
-    'speed_slow': 'S',
+    'slow': 'S',
     'dot': 'X',
     'glancing': 'G',
     'unrecoverable': 'U',
@@ -213,7 +213,6 @@ function battleState(battle: Battle, player: Player) {
 
 
 (async () => {
-
 
     const teamA = TeamBuilder.arenaBattle(player);
     teamA.addUnit(presets['bernie']);

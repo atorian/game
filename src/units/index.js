@@ -6,3 +6,4 @@ export {default as perna} from './perna';
 export {default as praha} from './praha';
 export {default as psamathe} from './psamathe';
 export {default as ritesh} from './ritesh';
+export {default as slime} from './slime';

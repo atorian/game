@@ -26,7 +26,7 @@ export default class Guard {
     subscribe(battle: Battle) {
         this.battle = battle;
         battle.dispatcher.on('battle_started', ({teamA, teamB}) => {
-            const units = [...teamA, ...teamB].filter(u => u.skills[2].passive);
+            const units = [...teamA, ...teamB].filter(u => u.skills[2] && u.skills[2].passive);
             for (const unit of units) {
                 if (unit.skills[2].guard) {
                     if (unit.skills[2].guard.on === 'death') {

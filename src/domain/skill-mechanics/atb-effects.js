@@ -3,12 +3,15 @@ import type {Contestant} from '../'
 import type {ActionContext, Mechanics, } from '../skill-mechanics';
 import target from './targeting';
 import {TargetModifier} from "../battle";
+import * as conditions from './conditions';
 
-type AtbStep = {
-    atb_boost?: TargetModifier
+type Conditional = {
+    condition?: 'is_crit',
 }
 
-function configure(conf: number | Object): TargetModifier {
+type AtbStep = Conditional & TargetModifier;
+
+function configure(conf: number | Object): AtbStep {
 
     if (typeof conf === 'number') {
         return {
@@ -30,8 +33,22 @@ export class AtbManipulation implements Mechanics {
         this.effect = effect;
     }
     apply(context: ActionContext, step: AtbStep, events: Event[]): ?Event[] {
-        const config = configure(step);
+        const config:AtbStep = configure(step);
         return target(config.target, context).reduce((mechanics_events: [], target: Contestant) => {
+            if (config.condition) {
+                if (conditions[config.condition].isOk(events)) {
+                    return [...mechanics_events, {
+                        name: `atb_${this.effect}`,
+                        payload: {
+                            target: target.id,
+                            value: config.value,
+                        }
+                    }]
+                }
+
+                return mechanics_events;
+            }
+
             return [...mechanics_events, {
                 name: `atb_${this.effect}`,
                 payload: {

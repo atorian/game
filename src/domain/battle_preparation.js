@@ -1,8 +1,8 @@
 import _ from 'lodash';
-import type {BaseUnit, BattleType, RuneSet} from "./domain";
-import * as units from './units';
-import {Battle} from "./domain/battle";
-import {Player} from "./domain/player";
+import type {BaseUnit, BattleType, RuneSet} from "./index";
+import {Battle} from "./battle";
+import {Player} from "./player";
+import * as units from '../units/index';
 
 type PreparingUnit = {
     family: string, // monster family name
