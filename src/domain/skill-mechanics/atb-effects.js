@@ -1,5 +1,6 @@
 // @flow
-import type {ActionContext, Mechanics, Targeted, Contestant} from '../battle'
+import type {Contestant} from '../'
+import type {ActionContext, Mechanics, } from '../skill-mechanics';
 import target from './targeting';
 import {TargetModifier} from "../battle";
 

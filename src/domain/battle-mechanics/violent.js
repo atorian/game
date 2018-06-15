@@ -14,8 +14,8 @@ export class Violent implements BattleMechanics {
     subscribe(battle: Battle) {
         battle.dispatcher.on('skill_used', ({unit_id}) => {
             const has_vio = battle.unit.rune_sets.includes('violent');
-            if (has_vio && this.proc()) {
-                battle.dispatcher.emit('next_unit', {
+            if (!battle.reacting && has_vio && this.proc()) {
+                battle.dispatcher.emit('additional_turn', {
                     unit_id: unit_id,
                 })
             }

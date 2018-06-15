@@ -1,5 +1,6 @@
 // @flow
-import type {Contestant, ActionContext, TemporalEffect, AllyTarget, Mechanics} from '../battle'
+import type {Contestant, TemporalEffect, AllyTarget} from '../'
+import type {ActionContext, Mechanics} from '../skill-mechanics';
 import target from './targeting';
 
 // not target as it's only allowed to target ally
@@ -19,7 +20,6 @@ function configure(conf: number | Object): Buf {
         ...conf,
     }
 }
-
 
 export const VALID_BUFS = [
     'immunity',
@@ -78,18 +78,6 @@ export const BUFFS = {
     },{})
 };
 
-
-/*
-return [...target_events, {
-    name: 'buffed',
-    payload: {
-        target: target.id,
-        effect: config.effect,
-        duration: config.duration,
-    }
-}];
-*/
-
 export class BeneficialEffects implements Mechanics {
     constructor(buf) {
         this.buf = buf;
@@ -109,6 +97,6 @@ export class BeneficialEffects implements Mechanics {
                     }]
                 },
                 []
-            )
+            );
     }
 }

@@ -1,9 +1,9 @@
-import {random} from 'lodash';
-import {ActionContext, Contestant, Mechanics} from "../battle";
-import type {HitEvent, Targeted} from "../battle";
+import _ from 'lodash';
+import type {Targeted, Contestant} from "../";
+import type {ActionContext, Mechanics} from "../skill-mechanics";
+import type {HitEvent} from "../battle";
 import {ELEMENT_RELATIONS} from "./index";
 import target from './targeting';
-import _ from 'lodash';
 
 export class Multiplier {
     evaluate(raw: string, context: ActionContext): number {
