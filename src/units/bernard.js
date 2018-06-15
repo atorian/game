@@ -10,6 +10,11 @@ export default {
     cd: 50,
     res: 15,
     acc: 0,
+    leader_ability: {
+        element: 'wind',
+        stat: 'atk',
+        value: 0.3,
+    },
     skills: [
         {
             id: 'Snatch',

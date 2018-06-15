@@ -21,7 +21,7 @@ function configure(conf: number | Object): Buf {
 }
 
 
-const VALID_BUFS = [
+export const VALID_BUFS = [
     'immunity',
     'invincibility',
     'defend',

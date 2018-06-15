@@ -1,5 +1,9 @@
 {
   "bernie": {
+    "family": "bernard",
+    "rune_sets": [
+      "swift"
+    ],
     "hp": 6277,
     "atk": 486,
     "def": 407,
@@ -9,7 +13,11 @@
     "res": 28,
     "acc": 16
   },
-  "megan":{
+  "megan": {
+    "family": "megan",
+    "rune_sets": [
+      "swift"
+    ],
     "hp": 0,
     "atk": 0,
     "def": 0,
@@ -19,7 +27,11 @@
     "res": 0,
     "acc": 0
   },
-  "bastet":{
+  "bastet": {
+    "family": "bastet",
+    "rune_sets": [
+      "swift"
+    ],
     "hp": 10462,
     "atk": 299,
     "def": 782,
@@ -29,7 +41,13 @@
     "res": 0,
     "acc": 90
   },
-  "lushen1":{
+  "lushen1": {
+    "family": "lushen",
+    "rune_sets": [
+      "fight",
+      "fight",
+      "will"
+    ],
     "hp": 6781,
     "atk": 1035,
     "def": 379,
@@ -39,7 +57,12 @@
     "res": 26,
     "acc": 22
   },
-  "lushen2":{
+  "lushen2": {
+    "family": "lushen",
+    "rune_sets": [
+      "rage",
+      "will"
+    ],
     "hp": 4461,
     "atk": 1495,
     "def": 294,
@@ -50,6 +73,8 @@
     "acc": 8
   },
   "praha": {
+    "family": "praha",
+    "rune_sets":["nemesis","nemesis","will"],
     "hp": 20000,
     "atk": 0,
     "def": 600,
@@ -60,6 +85,8 @@
     "acc": 0
   },
   "perna": {
+    "family": "perna",
+    "rune_sets":["violent"],
     "hp": 15000,
     "atk": 1000,
     "def": 200,
@@ -70,6 +97,8 @@
     "acc": 30
   },
   "psam": {
+    "family": "psamathe",
+    "rune_sets":["nemesis", "despair"],
     "hp": 5000,
     "atk": 1200,
     "def": 180,
@@ -77,6 +106,18 @@
     "cr": 70,
     "cd": 110,
     "res": 0,
+    "acc": 30
+  },
+  "ritesh": {
+    "family": "ritesh",
+    "rune_sets":["violent"],
+    "hp": 20000,
+    "atk": 400,
+    "def": 300,
+    "spd": 110,
+    "cr": 70,
+    "cd": 70,
+    "res": 30,
     "acc": 30
   }
 }

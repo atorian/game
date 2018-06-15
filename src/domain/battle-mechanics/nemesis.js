@@ -1,7 +1,7 @@
 import {Battle} from "../battle";
-import type {Contestant} from "../battle";
+import {BattleMechanics} from "./index";
 
-export default class Nemezis {
+export default class Nemesis implements BattleMechanics {
     constructor(policy) {
         this.policy = policy;
     }
@@ -9,15 +9,15 @@ export default class Nemezis {
     subscribe(battle: Battle) {
         battle.dispatcher.on('hit', ({damage, target}) => {
             // todo: calculate real value 4% atb for 7% hp lost
-            const unit: Contestant = battle.units[target];
-            const num_rune_sets = unit.rune_sets.filter(set => set === 'nemezis').length;
+            const unit = battle.units[target];
+            const num_rune_sets = unit.rune_sets.filter(set => set === 'nemesis').length;
 
             if (num_rune_sets > 0) {
                 const chunk = Math.floor(unit.max_hp / 7);
                 const procs = Math.floor(damage / chunk);
 
                 if (procs > 0) {
-                    battle.dispatcher.emit('nemezis', {
+                    battle.dispatcher.emit('nemesis', {
                         unit: unit.id,
                         value: procs * 4 * num_rune_sets,
                     })

@@ -32,7 +32,7 @@ export default {
             target: 'enemy',
             iterations: [
                 {
-                    enemy_dmg: 'target.hp * 9', // todo: add progression based on enemy hp
+                    enemy_dmg: 'self.atk * (5 + 4 * target.hp / target.max_hp)', // todo: add progression based on enemy hp
                 },
             ]
         },

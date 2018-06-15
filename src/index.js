@@ -1,18 +1,10 @@
-import {Battle} from "./battle";
-import type {Ability, BaseUnit} from "./units";
-import bernard from './units/bernard';
-import slime from './units/slime';
+import {Battle} from "./domain/battle";
 import {SymfonyStyle} from 'symfony-style-console';
-import Table from 'cli-table2';
-import lushen from "./units/lushen";
-import megan from "./units/megan";
-
-const extra_stats = require('../stats.json');
+import type {Ability} from "./domain";
+import TeamBuilder, {startBattle} from "./battle_preparation";
 import _ from 'lodash';
-import praha from "./units/praha";
-import bastet from "./units/bastet";
-import perna from "./units/perna";
-import psamathe from "./units/psamathe";
+
+const presets = require('../stats.json');
 
 
 process.on('unhandledRejection', (reason, p) => {
@@ -38,46 +30,6 @@ interface Player {
     id: number;
 
     requestAction(skills: Ability[], battle: Battle): Action;
-}
-
-type Stats = {
-    hp?: number,
-    atk?: number,
-    def?: number,
-    spd?: number,
-    cr?: number,
-    cd?: number,
-    res?: number,
-    acc?: number,
-}
-
-function createUnit(id, base, player_id, rune_sets, bonus_stats: Stats[] = []) {
-    const stats = ['hp', 'atk', 'def', 'spd', 'cr', 'cd', 'res', 'acc'];
-    const base_stats = stats.reduce((baseStats, name) => {
-        return {
-            ...baseStats,
-            [`base_${name}`]: base[name],
-        }
-    }, {
-        name: base.name,
-        element: base.element,
-        skills: base.skills,
-    });
-
-    return {
-        id,
-        player: player_id,
-        // declare base stats
-        ...base_stats,
-        // todo: add runes stats calculations here
-        ...stats.reduce((maxStats, name) => {
-            return {
-                ...maxStats,
-                [`max_${name}`]: base[name] + _.sumBy(bonus_stats, s => s[name] || 0),
-            }
-        }, {}),
-        rune_sets: rune_sets,
-    }
 }
 
 const io = new SymfonyStyle();
@@ -132,6 +84,18 @@ const target_strategies = {
 
 const player: Player = {
     id: 1,
+    arena_totems: [
+        {stat: 'atk', value: 0.2},
+        {stat: 'atk_fire', value: 0.21},
+        {stat: 'atk_wind', value: 0.21},
+        {stat: 'atk_water', value: 0.21},
+        {stat: 'atk_light', value: 0.21},
+        {stat: 'atk_dark', value: 0.21},
+        {stat: 'def', value: 0.2},
+        {stat: 'hp', value: 0.2},
+        {stat: 'spd', value: 0.15},
+        {stat: 'cd', value: 25},
+    ],
     async requestAction(skills: Ability[], battle: Battle): Action {
 
         io.section(`Current Unit ${battle.unit.name} of player ${battle.unit.player}`);
@@ -180,12 +144,27 @@ const player: Player = {
 
 const ai: Player = {
     id: 2,
+    arena_totems: [
+        {stat: 'atk', value: 0.2},
+        {stat: 'atk_fire', value: 0.21},
+        {stat: 'atk_wind', value: 0.21},
+        {stat: 'atk_water', value: 0.21},
+        {stat: 'def', value: 0.2},
+        {stat: 'hp', value: 0.2},
+        {stat: 'spd', value: 0.15},
+        {stat: 'cd', value: 25},
+    ],
     requestAction(skills: Ability[], battle: Battle): Action {
         console.log('AI got a turn');
 
+        const target = _.sample(
+            Object.values(battle.units)
+                .filter(u => u.player !== this.id)
+        );
+
         return {
             skill: skills[0].id,
-            target: "bastet",
+            target: target.id,
         };
     }
 };
@@ -194,77 +173,6 @@ const players = {
     [player.id]: player,
     [ai.id]: ai,
 };
-
-
-function windAttack30(unit: BaseUnit) {
-    if (unit.element === 'wind') {
-        return {
-            atk: unit.atk * 0.3,
-        }
-    }
-    return {};
-}
-
-const totems = [
-    function (unit: BaseUnit) {
-        return unit.def * 0.2;
-        return {def: unit.def * 0.20};
-    },
-    function (unit: BaseUnit) {
-        return {atk: unit.atk * 0.21};
-    },
-    function (unit: BaseUnit) {
-        return {atk: unit.atk * 0.20};
-    },
-    function (unit: BaseUnit) {
-        return {hp: unit.hp * 0.20};
-    },
-    function (unit: BaseUnit) {
-        return {spd: unit.spd * 0.15};
-    },
-    function (unit: BaseUnit) {
-        return {cd: 25};
-    },
-];
-
-function fightSetBonus(unit: BaseUnit, numSets: number = 1) {
-    return {atk: unit.atk * 0.08 * numSets};
-}
-
-
-const battle = new Battle(
-    [
-        createUnit('bernie', bernard, player.id, ['swift'], [
-            extra_stats['bernie'],
-            windAttack30(bernard),
-            fightSetBonus(bernard, 2),
-            ...totems.map(f => f(bernard)),
-        ]),
-        createUnit('bastet', bastet, player.id, ['swift'], [
-            extra_stats['bastet'],
-            windAttack30(bastet),
-            fightSetBonus(bastet, 2),
-            ...totems.map(f => f(bastet)),
-        ]),
-        createUnit('lushen1', lushen, player.id, ['fight', 'fight', 'will'], [
-            extra_stats['lushen1'],
-            windAttack30(lushen),
-            fightSetBonus(lushen, 2),
-            ...totems.map(f => f(lushen)),
-        ]),
-        createUnit('lushen2', lushen, player.id, ['rage', 'will'], [
-            extra_stats['lushen2'],
-            windAttack30(lushen),
-            fightSetBonus(lushen, 2),
-            ...totems.map(f => f(lushen)),
-        ]),
-    ],
-    [
-        createUnit('psam', psamathe, ai.id, ['nemezis', 'despair'], [extra_stats['psam']]),
-        createUnit('praha', praha, ai.id, ['nemezis', 'nemezis', 'will'], [extra_stats['praha']]),
-        createUnit('perna', perna, ai.id, ['violent'], [extra_stats['perna']]),
-    ]
-);
 
 const BUFS = {
     'def_buf': 'D',
@@ -304,12 +212,24 @@ function battleState(battle: Battle, player: Player) {
 }
 
 
-
 (async () => {
 
-    io.title('Battle Started');
 
-    battle.dispatcher.on('.', console.log);
+    const teamA = TeamBuilder.arenaBattle(player);
+    teamA.addUnit(presets['bernie']);
+    teamA.addUnit(presets['bastet']);
+    teamA.addUnit(presets['lushen1']);
+    teamA.addUnit(presets['lushen2']);
+
+    const teamB = TeamBuilder.arenaBattle(ai);
+    teamB.addUnit(presets['psam']);
+    teamB.addUnit(presets['praha']);
+    teamB.addUnit(presets['perna']);
+    teamB.addUnit(presets['ritesh']);
+
+    const battle = startBattle(teamA, teamB);
+
+    io.title('Battle Started');
 
     while (!battle.ended) {
         battle.next();

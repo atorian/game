@@ -16,11 +16,12 @@ export default class AutoAction {
             }
         });
 
-
         battle.dispatcher.on('turn_started', ({target}) => {
             if (this.units.includes(target) && battle.units[target].hp > 0) {
-                battle.dispatcher.emit('passive_triggered');
-                battle.cast(battle.units[target].skills[2]);
+                battle.dispatcher.emit('auto_action', {
+                    unit: target,
+                    skill_id: battle.units[target].skills[2].id,
+                });
             }
         });
     }

@@ -6,7 +6,7 @@ export function onDeath(battle, units) {
         if (units.includes(target) && battle.units[target].hp === 0) {
             const skill = battle.units[target].skills[2];
             if (battle.units[target].cooldowns[skill.id] === 0) {
-                battle.dispatcher.emit('guard_triggered', {
+                    battle.dispatcher.emit('guard_triggered', {
                     unit_id: target,
                     skill_id: skill.id,
                     target_id: target,

@@ -1,6 +1,3 @@
-import {aoe_enemy} from "../mechanics/targeting";
-import type {ActionContext} from "../battle";
-
 export default {
     name: 'Lushen',
     element: 'wind',
