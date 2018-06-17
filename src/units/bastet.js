@@ -10,6 +10,10 @@ export default {
     cd: 50,
     res: 40,
     acc: 0,
+    leader_ability: {
+        stat: 'def',
+        value: 0.3,
+    },
     skills: [
         {
             id: 'Touch of Seduction',

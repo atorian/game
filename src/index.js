@@ -177,9 +177,11 @@ const players = {
 const BUFS = {
     'def_buf': 'D',
     'atk_buf': 'A',
-    'haste': 'S',
+    'haste': 'F',
     'hot': 'T',
     'anti_crit': 'C',
+    'shield': 'O',
+    'rune_shield': 'R',
 };
 
 const DEBUFS = {

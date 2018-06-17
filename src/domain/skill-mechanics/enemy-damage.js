@@ -147,7 +147,7 @@ export class EnemyDmgSystem implements Mechanics {
 
         return target(config.target, context)
             .filter(u => u.hp)
-            .map((target: Contestant) => {
+            .reduce((mechanic_events:[], target: Contestant) => {
                 const strategy = this.hit_strategy_factory.create({
                     ...context,
                     target,
@@ -159,14 +159,42 @@ export class EnemyDmgSystem implements Mechanics {
                 const dmgReduction = 1000 / (1140 + 3.5 * (config.ignore_def ? 0 : target.def));
                 const randomFunctor = 1 + (_.random(0, 10) - 2) / 100;
 
-                return {
+                const shields = target.effects.filter(e => e.effect === 'shield' || e.effect === 'rune_shield');
+                const dmg = Math.floor(multiplied_dmg * dmgReduction * randomFunctor);
+
+                // todo: add invincibility
+                const {dmg: finalDmg, shield_events} = shields.reduce(({dmg, shield_events}, e) => {
+                    const finalDmg = Math.max(dmg - e.value, 0);
+                    if (finalDmg > 0) {
+                        return {
+                            dmg: finalDmg,
+                            shield_events: [...shield_events, {
+                                name: 'effect_removed',
+                                payload: {
+                                    target: target.id,
+                                    effect: e.effect,
+                                }
+                            }]
+                        }
+                    }
+
+                    return {
+                        dmg: finalDmg,
+                        shield_events,
+                    };
+
+                }, {dmg, shield_events: []});
+
+                return [
+                    ...mechanic_events,
+                    ...shield_events, {
                     name: 'hit',
                     payload: {
                         target: target.id,
                         type: strategy.name,
-                        damage: Math.floor(multiplied_dmg * dmgReduction * randomFunctor),
+                        damage: finalDmg,
                     }
-                };
-            });
+                }];
+            }, []);
     }
 }

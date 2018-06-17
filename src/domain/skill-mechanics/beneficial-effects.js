@@ -31,25 +31,24 @@ export const VALID_BUFS = [
     'counter',
     'soul_protect',
     'reflect',
-    // 'shield',
     // 'rune shield',
 ];
 
 export const BUFFS = {
-    def_buf(target) {
+    def_buf({target}) {
         return {
             stat: 'def',
             value: target.max_def * 0.7
         }
     },
-    atk_buf(target) {
+    atk_buf({target}) {
         return {
             effect: 'atk_buf',
             stat: 'atk',
             value: target.max_atk * 0.5
         }
     },
-    haste(target) {
+    haste({target}) {
         return {
             effect: 'haste',
             stat: 'spd',
@@ -63,11 +62,18 @@ export const BUFFS = {
             value: 50,
         }
     },
-    crit_buf(target) {
+    crit_buf({target}) {
         return {
             effect: 'crit_buf',
             stat: 'cr',
             value: 30,
+        }
+    },
+    shield({target, caster}) {
+        return {
+            effect: 'shield',
+            stat: 'hp',
+            value: 120 * 40, // always assume max lvl
         }
     },
     ...VALID_BUFS.reduce((buffs, name)  => {
@@ -90,7 +96,7 @@ export class BeneficialEffects implements Mechanics {
                     return [...target_events, {
                         name: 'buffed',
                         payload: {
-                            ...this.buf(target),
+                            ...this.buf({...context, target}),
                             target: target.id,
                             duration: config.duration,
                         }

@@ -48,7 +48,7 @@ export class Strip implements Mechanics {
             if (config.chance && this.roll() > config.chance) {
                 return mechanics_events;
             }
-            console.log('target', target.effects);
+
             if (config.irresistable || !this.resist(context.caster.acc, target.res)) {
 
                 const target_bufs: Effect[] = target.effects.filter(e => VALID_BUFS.includes(e.effect));
