@@ -13,7 +13,12 @@ export class Player {
             { stat: 'spd', value: 0.15 },
             { stat: 'cd', value: 25 },
         ];
-        this.gw_totems = [];
+        this.gw_totems = [
+            { stat: 'atk', value: 0.2 },
+            { stat: 'def', value: 0.2 },
+            { stat: 'hp', value: 0.2 },
+            { stat: 'cd', value: 25 },
+        ];
         this.presets = [/** units summoned by user */];
     }
 }

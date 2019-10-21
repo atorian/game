@@ -156,7 +156,7 @@ const eventHandlers = {
             .filter(u => u.hp === 0 && !u.is_dead);
 
         deadUnits.forEach((u) => {
-            this.dispatcher.emit('unit_died',{
+            this.emit('unit_died',{
                 target: u.id,
             });
         });
@@ -166,7 +166,7 @@ const eventHandlers = {
             .map(u => u.player);
 
         if (_.uniq(players).length === 1) {
-            this.dispatcher.emit('battle_ended', {
+            this.emit('battle_ended', {
                 winner: players[0],
             });
         }
@@ -245,13 +245,6 @@ const eventHandlers = {
             atb: target.atb + event.value,
         }
     },
-    nemesis({unit, value}) {
-        const target = this.units[unit];
-        this.units[unit] = {
-            ...target,
-            atb: target.atb + value,
-        }
-    },
     heal({target, value}) {
         const unit = this.units[target];
         this.units[target] = {
@@ -326,10 +319,10 @@ function cast(skill, target=null, caster=null) {
         caster: caster || this.unit,
         skill,
         target,
-    }).forEach(e => this.dispatcher.emit(e.name, e.payload));
+    }).forEach(e => this.emit(e.name, e.payload));
 
     // todo: emit action ended - let monsters die here
-    this.dispatcher.emit('action_ended');
+    this.emit('action_ended');
 
     // when reacting - other actions can not be triggered,
     // but defencive effects - could be
@@ -341,13 +334,13 @@ function cast(skill, target=null, caster=null) {
             caster: this.units[action.unit_id],
             skill: action.guard ? {...skill, ...skill.guard} : skill,
             target: action.target ? this.units[action.target] : null,
-        }).forEach(e => this.dispatcher.emit(e.name, e.payload));
+        }).forEach(e => this.emit(e.name, e.payload));
     });
     this.pending_actions = [];
     this.reacting = false;
 }
 
-export class Battle {
+export class Battle extends EventEmitter {
     units: Contestant[];
     unit: Contestant;
     winner: number;
@@ -358,13 +351,12 @@ export class Battle {
     constructor(teamA: Unit[], teamB: Unit[]) {
         this.events = [];
         this.version = 0;
-        this.dispatcher = new EventEmitter();
         this.pending_actions = [];
         this.skill_mechanics = new SkillMechanics();
 
         // order is important Battle must subscribe first to apply events first
         Object.keys(eventHandlers).forEach(event => {
-            this.dispatcher.on(event, (payload) => {
+            this.on(event, (payload) => {
                 causes.call(this, {
                     name: event,
                     payload
@@ -375,7 +367,7 @@ export class Battle {
         this.battle_mechanics = new BattleMechanics();
         this.battle_mechanics.subscribe(this);
 
-        this.dispatcher.emit('battle_started', {
+        this.emit('battle_started', {
             teamA,
             teamB,
         });
@@ -392,12 +384,12 @@ export class Battle {
 
     next() {
         if (this.next_unit) {
-            this.dispatcher.emit('turn_started', {
+            this.emit('turn_started', {
                 target: this.next_unit,
             });
         } else {
             while (!this.unit) {
-                this.dispatcher.emit(
+                this.emit(
                     'tick',
                     Object.values(this.units)
                         .filter(unit => unit.hp > 0)
@@ -416,7 +408,7 @@ export class Battle {
 
                 if (nextUnit) {
                     // todo: use unit id
-                    this.dispatcher.emit('turn_started', {
+                    this.emit('turn_started', {
                         target: nextUnit.id,
                     });
                 }
@@ -439,7 +431,7 @@ export class Battle {
             throw new Error('You are not allowed to trigger this skill.');
         }
 
-        this.dispatcher.emit('skill_used', {
+        this.emit('skill_used', {
             unit_id: this.unit.id,
             skill_id,
             target_id,
@@ -447,7 +439,7 @@ export class Battle {
 
         cast.call(this, skill, this.units[target_id]);
 
-        this.dispatcher.emit('turn_ended', {
+        this.emit('turn_ended', {
             unit_id: this.unit.id,
         });
     }

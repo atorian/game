@@ -31,7 +31,7 @@ export default class TeamBuilder {
             arena: 4,
             guild_battle: 3,
             dungeon: 5,
-            rift: 6,
+            rift: 8, // fixme: should be total 6 units, but 8 slots - front and back line
         }[type];
 
         this.slots = new Array(size).fill(null);
@@ -57,9 +57,9 @@ export default class TeamBuilder {
         return new TeamBuilder(player, 'dungeon');
     }
 
-    static riftBattle(player) {
-        return new TeamBuilder(player, 'rift');
-    }
+//    static riftBattle(player) {
+//        return new TeamBuilder(player, 'rift');
+//    }
 
     moveUnit(unit: PreparingUnit, newIdx) {
         const oldIdx = this.slots.indexOf(unit);
@@ -96,7 +96,7 @@ function applyRunes(unit: PreparingUnit) {
     }
 }
 
-function applyTotems(player) {
+function applyTotems(player: Player) {
     return (base: BaseUnit) => {
         return player.arena_totems.reduce((stats, totem) => {
             if (totem.stat === 'cd') {
@@ -216,11 +216,31 @@ function applyEnhanceRunes(builder: TeamBuilder) {
     }
 }
 
-function prepareForBattle(team: TeamBuilder) {
+function applyGuildFlags(player: Player) {
+    return (base: BaseUnit) => {
+        return player.gw_totems.reduce((stats, totem) => {
+            if (totem.stat === 'cd') {
+                return {
+                    ...stats,
+                    [totem.stat]: totem.value,
+                }
+            }
+
+            return {
+                ...stats,
+                [totem.stat]: stats[totem.stat] + 1 * (base[totem.stat] * totem.value).toFixed(0),
+            }
+
+        }, {atk: 0, def: 0, hp: 0, spd: 0, cd: 0});
+    }
+}
+
+export function prepareForBattle(team: TeamBuilder) {
     return (unit: PreparingUnit) => {
         const baseUnit: BaseUnit = units[unit.family];
+        // todo: call a method on unit to apply lead skill and other global buffs
 
-        return [
+        bonuses = [
             applyRunes(unit),
             applyTotems(team.player),
             applyLeaderSkill(units[team.slots[0].family], team.type),
@@ -229,7 +249,15 @@ function prepareForBattle(team: TeamBuilder) {
             applyAccuracyRunes(team),
             applyToleranceRunes(team),
             applyEnhanceRunes(team),
-        ].map(f => f(baseUnit))
+        ]
+
+        if (team.type === 'guild_battle') {
+            bonuses.push(applyGuildFlags(team.player))
+        }
+
+        // todo: add guild skills
+
+        return bonuses.map(f => f(baseUnit))
             .reduce((finalStats, additional_stats) => {
                 return Object.keys(additional_stats).reduce((accumulated, stat) => {
                     if (stat === 'rune_sets') {

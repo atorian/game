@@ -116,3 +116,8 @@ export type Contestant = Unit & {
     is_revivable: boolean,
     cooldowns: { [string]: number }
 }
+
+function hasRuneSetEquiped(unit: Contestant, set: string): boolean {
+    return unit.rune_sets.
+}
+

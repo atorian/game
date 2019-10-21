@@ -7,15 +7,15 @@ export function vioPolicy() {
 }
 
 export class Violent implements BattleMechanics {
-    constructor(policy) {
-        this.proc = policy;
+    constructor() {
+        this.proc = vioPolicy;
     }
 
     subscribe(battle: Battle) {
-        battle.dispatcher.on('skill_used', ({unit_id}) => {
+        battle.on('skill_used', ({unit_id}) => {
             const has_vio = battle.unit.rune_sets.includes('violent');
             if (!battle.reacting && has_vio && this.proc()) {
-                battle.dispatcher.emit('additional_turn', {
+                battle.emit('additional_turn', {
                     unit_id: unit_id,
                 })
             }

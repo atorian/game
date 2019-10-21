@@ -14,7 +14,7 @@ export default class BattleMechanicsAggregate {
 
     constructor() {
         this.mechanics = [
-            new Nemesis(/*policy*/),
+            new Nemesis(),
             new AutoAction(/*policy*/),
             new Guard(/*policy*/),
             Violent,

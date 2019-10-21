@@ -81,7 +81,6 @@ const target_strategies = {
     },
 };
 
-
 const player: Player = {
     id: 1,
     arena_totems: [
