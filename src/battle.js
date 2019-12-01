@@ -2,7 +2,8 @@ import Contestant, {
     DmgReceived,
     SkillCasted,
     Tick,
-    TurnStarted
+    TurnStarted,
+    UnitDied,
 } from "./contestant";
 import { GetSkill } from "./skills";
 import type { Unit } from "./index";
@@ -48,6 +49,19 @@ class CurrentActiveUnit {
     }
 }
 
+class TurnEnded {
+    constructor(unit: Contestant) {
+        this.id = unit.id;
+    }
+}
+
+class BattleEnded {
+    constructor(winner) {
+        this.ended = true;
+        this.winner = winner;
+    }
+}
+
 export class Battle {
 
     static SCENARIO: string = 'scenario';
@@ -65,6 +79,9 @@ export class Battle {
     //
     type: string;
     started: boolean = false;
+    ended: boolean = false;
+    winner: string;
+
     units: { [string]: Contestant } = {};
     current: Contestant;
 
@@ -87,6 +104,7 @@ export class Battle {
     }
 
     next() {
+        if (this.ended) throw new Error('Battle is already finished.');
         if (this.current) return new CurrentActiveUnit(this.current);
 
         const units = Object.values(this.units);
@@ -107,6 +125,12 @@ export class Battle {
     cast(skillIdx, targetId) {
         if (this.current.skills[skillIdx].cooldown === 0) {
             this.causes(new SkillUsed(skillIdx, targetId));
+            this.causes(new TurnEnded(this.current));
+            Object.values(this.units).forEach(u => {
+                if (u.currentHP === 0) {
+                    u.die();
+                }
+            });
             return;
         }
         throw new Error("Skill is on CD");
@@ -122,6 +146,9 @@ export class Battle {
                     this.applyTowers(unit);
                 });
                 break;
+            case TurnEnded:
+                this.current = null;
+                break;
             case SkillUsed:
                 this.current.useSkill(event.skillId, event.targetId, Object.values(this.units));
                 break;
@@ -134,7 +161,13 @@ export class Battle {
             case DmgReceived:
             case Tick:
             case SkillCasted:
+            case UnitDied:
                 this.units[event.id].apply(event);
+                this.validateState();
+                break;
+            case BattleEnded:
+                this.ended = true;
+                this.winner = event.winner;
                 break;
             default:
                 throw new Error(`Unknown Event: "${event.constructor.name}"`);
@@ -149,5 +182,17 @@ export class Battle {
     causes(event) {
         this.events.push(event);
         this.applyEvent(event);
+    }
+
+    validateState() {
+        const teamsAlive = new Set(
+            Object.values(this.units)
+            .filter(u => !u.isDead())
+            .map(u => u.player)
+        );
+
+        if (teamsAlive.size === 1) {
+            this.causes(new BattleEnded([...teamsAlive.values()][0]));
+        }
     }
 }

@@ -19,6 +19,19 @@ const TowerMultipliers = {
 
 const MAX_TOWER_LVL = 10;
 
+const ZERO_LVL_TOWERS = { // Towers
+    def: 0,
+    atk: 0,
+    wind_atk: 0,
+    fire_atk: 0,
+    water_atk: 0,
+    light_atk: 0,
+    dark_atk: 0,
+    hp: 0,
+    cd: 0,
+    spd: 0,
+}
+
 export const GloryTowers = {
 
     towers: {
@@ -37,7 +50,9 @@ export const GloryTowers = {
     },
 
     apply(unit: Unit) {
-        const towers = this.towers[unit.player];
+        const towers = this.towers[unit.player] || null;
+
+        if (!towers) return;
 
         let res = {
             atk: TowerMultipliers.atk[towers.atk - 1] * unit.atk / 100,
@@ -81,7 +96,9 @@ export const GuildFlags = {
     },
 
     apply(unit: Unit) {
-        const towers = this.towers[unit.player];
+        const towers = this.towers[unit.player] || null;
+
+        if (!towers) return;
 
         return {
             cd: TowerMultipliers.cd[towers.cd - 1],

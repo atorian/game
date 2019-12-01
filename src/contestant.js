@@ -39,10 +39,18 @@ export class SkillCasted {
     }
 }
 
-const BTL = Symbol('battle');
-
 interface BattleDispatcher {
     causes(event: Object): void;
+}
+
+// todo: turn ended
+
+export class UnitDied {
+    constructor(unit: Contestant) {
+        this.id = unit.id;
+        this.atb = 0;
+        this.dead = true;
+    }
 }
 
 export default class Contestant {
@@ -62,6 +70,8 @@ export default class Contestant {
     cd: number;
     res: number;
     acc: number;
+
+    dead: false;
 
     skills: Ability[];
 
@@ -106,6 +116,12 @@ export default class Contestant {
         );
     }
 
+    die() {
+        this.battle.causes(
+            new UnitDied(this)
+        );
+    }
+
     applyPermanentStats(extraStats: Unit) {
         const { id, ...stats } = extraStats;
         for (const i in stats) {
@@ -124,5 +140,9 @@ export default class Contestant {
         }
 
         Object.assign(this, stats);
+    }
+
+    isDead() {
+        return this.dead;
     }
 }

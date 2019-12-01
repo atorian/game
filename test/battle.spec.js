@@ -6,6 +6,7 @@ chai.use(chaiSubset);
 
 const { assert } = chai;
 import { WATER, WIND } from "../src";
+import Contestant from "../src/contestant";
 
 describe('Battle', () => {
     it("starts", () => {
@@ -14,10 +15,10 @@ describe('Battle', () => {
         const slowUnit = {
             id: 'slow-unit-id',
             element: WATER,
-            player: 'player-id',
-            hp: 1000,
+            player: 'looser',
+            hp: 1,
             atk: 100,
-            def: 100,
+            def: 1,
             spd: 100,
             cr: 15,
             cd: 50,
@@ -28,7 +29,7 @@ describe('Battle', () => {
         const fastUnit = {
             id: 'fast-unit-id',
             element: WIND,
-            player: 'player-id',
+            player: 'winner',
             hp: 1000,
             atk: 100,
             def: 100,
@@ -44,44 +45,17 @@ describe('Battle', () => {
 
         assert.deepEqual(battle.type, Battle.GUILD_BATTLE);
 
-        assert.include(battle.units['slow-unit-id'], {
-            id: 'slow-unit-id',
-            player: 'player-id',
-            element: WATER,
-            atb: 0,
-            currentHP: 1400,
-            hp: 1400,
-            atk: 160,
-            def: 140,
-            spd: 115,
-            cr: 15,
-            cd: 100,
-            res: 15,
-            acc: 0,
-        });
-
-        assert.include(battle.units['fast-unit-id'], {
-            id: 'fast-unit-id',
-            player: 'player-id',
-            element: WIND,
-            atb: 0,
-            currentHP: 1400,
-            hp: 1400,
-            atk: 160,
-            def: 140,
-            spd: 133.4,
-            cr: 15,
-            cd: 100,
-            res: 15,
-            acc: 0,
-        });
+        assert.instanceOf(battle.units['fast-unit-id'], Contestant);
+        assert.instanceOf(battle.units['slow-unit-id'], Contestant);
 
         const nextUnit = battle.next();
 
         assert.deepEqual(nextUnit, { id: 'fast-unit-id', skills: { 0: 0 } }, 'fastest unit should get a turn');
 
-        battle.cast(0, 'slow-unit-id');
+        battle.cast(nextUnit.skills[0], 'slow-unit-id');
 
-        assert.equal(battle.units['slow-unit-id'].currentHP, 835);
+        assert.equal(battle.units['slow-unit-id'].currentHP, 0);
+        assert.equal(battle.ended, true);
+        assert.equal(battle.winner, 'winner');
     });
 });
