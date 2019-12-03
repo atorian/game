@@ -53,6 +53,48 @@ export class UnitDied {
     }
 }
 
+
+type Effect = {
+    name: string,
+    duration: number,
+}
+
+class Effects {
+    constructor(elements = []) {
+        this.elements = elements;
+    }
+
+    count() {
+        return this.elements.length;
+    }
+
+    has(name: string) {
+        return this.elements.find(el => el.name === name);
+    }
+
+    add(e: Effect): void {
+        if (this.has(e.name) && e.name !== 'dot') {
+            // increase duration
+        } else if (this.elements.length < 10) {
+            // add new effect
+        }
+    }
+
+    reduceDuration() {
+        this.elements = this.elements.map(e => ({
+            ...e,
+            duration: e.duration - 1,
+        })).filter(e => e.dungeon > 0)
+    }
+
+    increaseDuration() {
+        this.elements = this.elements.map(e => ({
+            ...e,
+            duration: e.duration + 1,
+        }))
+    }
+}
+
 export default class Contestant {
 
     id: string;
@@ -76,6 +118,7 @@ export default class Contestant {
     skills: Ability[];
 
     battle: BattleDispatcher;
+    effects: Effect[] = [];
 
     constructor(battle: BattleDispatcher, unit: Unit, skills: Ability[]) {
         this.battle = battle;
@@ -90,6 +133,8 @@ export default class Contestant {
         //
         this.atb = 0;
         this.skills = skills;
+        //
+        this.effects = new Effects();
     }
 
     useSkill(skillId: number, targetId: string, units: Contestant[]): void {
