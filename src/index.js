@@ -28,7 +28,6 @@ export interface Ability {
     refresh(number): void;
 }
 
-
 export const WIND = Symbol('wind');
 export const FIRE = Symbol('fire');
 export const WATER = Symbol('water');

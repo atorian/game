@@ -54,41 +54,35 @@ function defaultRng(): number {
 
 type rng = () => number;
 
-// function hit(roll: rng = defaultRng) {
-//     let chance = roll();
-// todo: add elemental king effect = always advantage
-// const glancing_chance = ELEMENT_RELATIONS[context.caster.element].weak === context.target.element ? 15 : 0;
-// const crit_mod = hasAdvantage(context.caster, context.target) ? 15 : 0;
-//
-// if (n <= (glancing_chance + context.caster.glancing_mod)) {
-//     return new GlancingDamageStrategy(context);
-// } else if (this.roll() <= context.caster.cr + crit_mod) {
-//     return new CritDamageStrategy(context);
-// } else if (hasAdvantage(context.caster, context.target) && this.roll() <= 15) {
-//     return new CrushingDamageStrategy(context);
-// }
-//
-// return new NormalDamageStrategy(context);
-// }
 
-type ActionContext = {
-    caster: Contestant,
-    target: Contestant,
-    params: SkillMultipliers,
+function statOf(u: Contestant, stat: string): number {
+    return u[stat] + u[stat] * u.effects.filter(e => e[stat])
+        .reduce((rate: number, modifier: number) => rate + modifier, 0);
+}
+
+function chanceOf(u: Contestant, stat: string): number {
+    return u[stat] + u.effects.filter(e => e[stat])
+        .reduce((rate: number, modifier: number) => rate + modifier, 0);
 }
 
 function atkOf(u: Contestant): number {
-    if (u.effects.has('atk-increase')) {
-        return u.atk + u.atk * 0.5
-    }
-    return u.atk;
+    return statOf(u, 'atk');
 }
 
 function defOf(u: Contestant): number {
-    if (u.effects.has('def-increase')) {
-        return u.def + u.def * 0.7
-    }
-    return u.def;
+    return statOf(u, 'def');
+}
+
+function glanceChanceOf(u: Contestant): number {
+    return chanceOf(u, 'gr');
+}
+
+function critChanceOf(u: Contestant): number {
+    return chanceOf(u, 'cr');
+}
+
+function antiCritChanceOf(u: Contestant): number {
+    return chanceOf(u, 'antiCr');
 }
 
 type HitContext = {
@@ -98,16 +92,61 @@ type HitContext = {
     effects?: Object[],
 }
 
-export function simpleAtkDmg(caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
-    const rawDmg = atkOf(caster) * 3.3 + 35;
-    const dmgReduction = 1000 / (1140 + 3.5 * defOf(target));
-    const randomFunctor = 1 + (_.random(0, 10) - 2) / 100;
-    // todo: switch normal crit crush glance
-    return {
-        ...ctx,
-        isCrit: false,
-        isGlance: false,
-        dmg: rawDmg * (100 + multipliers.dmg) / 100 * dmgReduction * randomFunctor,
+function elementAdvMod(caster: Contestant, target: Contestant): number {
+    return Elements.hasAdvantage(caster, target) ? 15 : 0;
+}
+
+function randomDmgMultiplier(rng) {
+    return 1 + (Math.floor(rng() / 100) - 2) / 100;
+}
+
+function dmgReducton(u: Contestant): number {
+    // todo: might need a caster too, for conditional reduction, eg 50% less from fire for fire pony or wind serpent
+    return 1000 / (1140 + 3.5 * defOf(u));
+}
+
+function glancedDmg(rawDmg: number, caster: Contestant, target: Contestant): number {
+    return rawDmg - rawDmg * 0.3 - (Elements.hasDisadvantage(caster, target) ? rawDmg * 0.16 : 0);
+}
+
+function critDmg(rawDmg: number, multipliers: SkillMultipliers, cd: number) {
+    return rawDmg * (100 + multipliers.dmg + cd) / 100;
+}
+
+function crashedDmg(rawDmg: number, multipliers: SkillMultipliers) {
+    return rawDmg * (100 + multipliers.dmg + 30) / 100;
+}
+
+export function simpleAtkDmg(roll: rng): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        const rawDmg = atkOf(caster) * 3.3 + 35;
+
+        const advMod = elementAdvMod(caster, target);
+        const glancingChance = glanceChanceOf(caster) + advMod;
+        const critChance = critChanceOf(caster) - antiCritChanceOf(target) + advMod;
+        let isCrit = false, isGlance = false, isCrush = false, dmg;
+
+        const n = roll();
+        if (n <= glancingChance) { // glance
+            isGlance = true;
+            dmg = glancedDmg(rawDmg, caster, target);
+        } else if (n <= critChance) { // crit
+            isCrit = true;
+            dmg = critDmg(rawDmg, multipliers, caster.cd) * dmgReducton(target) * randomDmgMultiplier(roll);
+        } else if (n <= advMod) { // crush
+            isCrush = true;
+            dmg = crashedDmg(rawDmg, multipliers) * dmgReducton(target) * randomDmgMultiplier(roll);
+        } else { // normal
+            dmg = rawDmg * (100 + multipliers.dmg) / 100;
+        }
+
+        return {
+            ...ctx,
+            isCrit,
+            isGlance,
+            isCrush,
+            dmg: dmg * dmgReducton(target) * randomDmgMultiplier(roll),
+        }
     }
 }
 
@@ -126,7 +165,7 @@ const dummySkill: SkillSpec = {
     target: targetEnemy,
     action: [
         step(
-            simpleAtkDmg
+            simpleAtkDmg(defaultRng),
         ),
     ],
     meta: {

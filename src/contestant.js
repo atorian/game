@@ -113,6 +113,9 @@ export default class Contestant {
     res: number;
     acc: number;
 
+    // glancing rate
+    gr: number;
+
     dead: false;
 
     skills: Ability[];
