@@ -57,6 +57,14 @@ export class UnitDied {
 type Effect = {
     name: string,
     duration: number,
+    atk?: number,
+    def?: number,
+    cr?: number,
+    cd?: number,
+    gr?: number,
+    spd?: number,
+    shield?: number,
+    immunity?: number,
 }
 
 class Effects {
@@ -93,6 +101,10 @@ class Effects {
             duration: e.duration + 1,
         }))
     }
+
+    affecting(stat: string): Effect[] {
+        return this.elements.filter((el) => el[stat]);
+    }
 }
 
 export default class Contestant {
@@ -116,6 +128,7 @@ export default class Contestant {
     // glancing rate
     gr: number;
 
+    // todo: could use state pattern by implementing DeadContestant and AliveContestant
     dead: false;
 
     skills: Ability[];

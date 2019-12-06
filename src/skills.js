@@ -25,8 +25,7 @@ type Targeter = (string, Contestant[]) => Unit[];
 type BattleMechanic = (Contestant, Contestant, SkillMultipliers, HitContext) => HitContext;
 type SkillStep = (Contestant, Contestant, SkillMultipliers) => void;
 
-
-function targetEnemy(targetId, units: Contestant[]): Contestant[] {
+export function targetEnemy(targetId:string, units: Contestant[]): Contestant[] {
     return units.filter(u => u.id === targetId);
 }
 
@@ -47,21 +46,19 @@ type SkillMultipliers = {
 
 type SkillMeta = SkillMultipliers & SkillCooldown
 
-
 function defaultRng(): number {
     return _.random(1, 100);
 }
 
 type rng = () => number;
 
-
 function statOf(u: Contestant, stat: string): number {
-    return u[stat] + u[stat] * u.effects.filter(e => e[stat])
+    return u[stat] + u[stat] * u.effects.affecting(stat)
         .reduce((rate: number, modifier: number) => rate + modifier, 0);
 }
 
 function chanceOf(u: Contestant, stat: string): number {
-    return u[stat] + u.effects.filter(e => e[stat])
+    return u[stat] + u.effects.affecting(stat)
         .reduce((rate: number, modifier: number) => rate + modifier, 0);
 }
 
@@ -117,6 +114,10 @@ function crashedDmg(rawDmg: number, multipliers: SkillMultipliers) {
     return rawDmg * (100 + multipliers.dmg + 30) / 100;
 }
 
+function normalDmg(rawDmg: number, multipliers: SkillMultipliers) {
+    return rawDmg * (100 + multipliers.dmg) / 100;
+}
+
 export function simpleAtkDmg(roll: rng): BattleMechanic {
     return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
         const rawDmg = atkOf(caster) * 3.3 + 35;
@@ -137,7 +138,7 @@ export function simpleAtkDmg(roll: rng): BattleMechanic {
             isCrush = true;
             dmg = crashedDmg(rawDmg, multipliers) * dmgReducton(target) * randomDmgMultiplier(roll);
         } else { // normal
-            dmg = rawDmg * (100 + multipliers.dmg) / 100;
+            dmg =  normalDmg(rawDmg, multipliers);
         }
 
         return {
@@ -150,7 +151,7 @@ export function simpleAtkDmg(roll: rng): BattleMechanic {
     }
 }
 
-function step(...mechanics: BattleMechanic[]): SkillStep {
+export function step(...mechanics: BattleMechanic[]): SkillStep {
     return (caster: Contestant, target: Contestant, meta: SkillMultipliers) => {
         const hit: HitContext = mechanics.reduce((ctx: HitContext, m: BattleMechanic) => {
             return m(caster, target, meta, ctx);
@@ -185,20 +186,7 @@ function multistep(steps: SkillStep[]): SkillStep {
     }
 }
 
-export function GetSkill(id: number) {
-    let spec: ?SkillSpec = GenericSkills.get(id);
-    if (spec) {
-        return new GenericSkill(
-            spec.meta,
-            spec.target,
-            multistep(spec.action),
-        );
-    }
-
-    throw new Error(`Unknown skill: ${id}`)
-}
-
-class GenericSkill implements Ability {
+export class GenericSkill implements Ability {
     multipliers: SkillMultipliers;
     target: Targeter;
     apply: SkillStep;
@@ -225,4 +213,17 @@ class GenericSkill implements Ability {
             this.cooldown = 0;
         }
     }
+}
+
+export function GetSkill(id: number): Ability {
+    let spec: ?SkillSpec = GenericSkills.get(id);
+    if (spec) {
+        return new GenericSkill(
+            spec.meta,
+            spec.target,
+            multistep(spec.action),
+        );
+    }
+
+    throw new Error(`Unknown skill: ${id}`)
 }

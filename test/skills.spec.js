@@ -1,7 +1,7 @@
 import { assert } from 'chai';
 import { before } from 'mocha'
 import { DARK, FIRE, LIGHT, WATER, WIND } from "../src";
-import { Elements, GetSkill } from "../src/skills";
+import { Elements, GenericSkill, GetSkill, simpleAtkDmg, step, targetEnemy } from "../src/skills";
 import Contestant from "../src/contestant";
 import { Battle } from "../src/battle";
 
@@ -71,7 +71,17 @@ describe('Generic Skill', () => {
     });
 
     it('casts dmg to target', () => {
-        const skill = GetSkill(1);
+        const skill = new GenericSkill(
+            {
+                dmg: 0.3,
+                effect: 0.35,
+                cooldown: 0,
+            },
+            targetEnemy,
+            step(
+                simpleAtkDmg(() => 1),
+            ),
+        );
 
         const target = new Contestant(battle, {
             id: 'target-id',
@@ -86,7 +96,7 @@ describe('Generic Skill', () => {
             res: 15,
             acc: 0,
             skills: [1],
-        }, [GetSkill(1)]);
+        }, [skill]);
         const caster = new Contestant(battle, {
             id: 'caster-id',
             player: 'player-2',
@@ -100,7 +110,7 @@ describe('Generic Skill', () => {
             res: 15,
             acc: 0,
             skills: [1],
-        }, [GetSkill(1)]);
+        }, [skill]);
 
         battle.units = {
             [caster.id]: caster,
@@ -109,6 +119,6 @@ describe('Generic Skill', () => {
 
         skill.cast(caster, 'target-id', [caster, target]);
 
-        assert.deepEqual(battle.units['target-id'].currentHP, 634);
+        assert.deepEqual(battle.units['target-id'].currentHP, 759);
     });
 });
