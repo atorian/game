@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" type="text/css" href="http://yui.yahooapis.com/3.18.1/build/cssreset/cssreset-min.css">
+    <meta charset="UTF-8">
+    <title>Summoners War Battle simulator</title>
+</head>
+<style>
+
+</style>
+<script type="module">
+
+    import { Battle } from './dist/battle.js';
+
+    class Storage {
+        constructor() {
+
+        }
+
+        setArenaTower(tower, lvl) {
+            const towers = this.getArenaTowers();
+            if (tower in towers) {
+                localStorage.setItem('arena-towers', {
+                    ...towers,
+                    [tower]: lvl,
+                });
+            } else {
+                throw new Error('');
+            }
+        }
+
+        getArenaTowers() {
+            return localStorage.getItem('arena-towers') || {
+                "guardstone": 0,
+                "water-sanctuary": 0,
+                "fire-sanctuary": 0,
+                "wind-sanctuary": 0,
+                "light-sanctuary": 0,
+                "dark-sanctuary": 0,
+                "ancient-sword": 0,
+                "crystal-altar": 0,
+                "sky-tribe-totem": 0,
+                "fallen-ancient-guardian": 0,
+            };
+        }
+    }
+
+    const battle = new Battle('some-battle-id-here');
+
+    let battles = {
+        'some-battle-id-here': battle,
+    };
+
+    class GuildBattleView extends HTMLElement {
+
+        constructor() {
+            super();
+            this._battle = battles[this.battle_id];
+        }
+
+        connectedCallback() {
+            // <x-team player="1" members=${battle.team}></x-team>
+            // <x-team player="2"></x-team>
+            // <x-battle-log/>
+            this.innerHTML = `
+                <div>test</div>
+            `;
+        }
+    }
+
+    customElements.define('x-battle', GuildBattleView);
+</script>
+<body>
+<x-battle battle_id="some-battle-id-here">
+</x-battle>
+</body>
+</html>

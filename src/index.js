@@ -18,9 +18,9 @@ export type Unit = {
     skills: number[];
 } & Stats
 
-export type Player = {
-    id: string
-}
+export type OwnedUnit = Unit & {
+    player: string;
+};
 
 export interface Ability {
     cooldown: number;

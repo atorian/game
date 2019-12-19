@@ -1,3 +1,7 @@
 # Turn Based Battle Engine in JS
 
-Don't try it at home :)
+Test it:
+
+    npm start
+
+and goto http://localhost:9000 to try it.

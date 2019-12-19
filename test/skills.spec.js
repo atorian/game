@@ -72,6 +72,7 @@ describe('Generic Skill', () => {
 
     it('casts dmg to target', () => {
         const skill = new GenericSkill(
+            0,
             {
                 dmg: 0.3,
                 effect: 0.35,

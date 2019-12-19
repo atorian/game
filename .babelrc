@@ -1,17 +1,19 @@
 {
   "presets": [
-    "flow",
-    "env"
+    "@babel/preset-flow",
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "esmodules": true,
+          "node": true,
+          "browsers": "last 2 Chrome versions"
+        },
+        "modules": false
+      }
+    ]
   ],
   "plugins": [
-    "syntax-object-rest-spread",
-    "transform-class-properties"
-  ],
-  "env": {
-    "test": {
-      "plugins": [
-        "istanbul"
-      ]
-    }
-  }
+    "@babel/plugin-proposal-class-properties"
+  ]
 }

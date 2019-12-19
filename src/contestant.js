@@ -1,4 +1,4 @@
-import type { Ability, Unit } from "./index";
+import type { Ability, Unit, OwnedUnit } from "./index";
 import { DARK, FIRE, LIGHT, WATER, WIND } from "./index";
 
 export class TurnStarted {
@@ -136,7 +136,7 @@ export default class Contestant {
     battle: BattleDispatcher;
     effects: Effect[] = [];
 
-    constructor(battle: BattleDispatcher, unit: Unit, skills: Ability[]) {
+    constructor(battle: BattleDispatcher, unit: OwnedUnit, skills: Ability[]) {
         this.battle = battle;
         const { id, element, player, skills: _, ...stats } = unit;
 

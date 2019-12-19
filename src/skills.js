@@ -118,9 +118,15 @@ function normalDmg(rawDmg: number, multipliers: SkillMultipliers) {
     return rawDmg * (100 + multipliers.dmg) / 100;
 }
 
-export function simpleAtkDmg(roll: rng): BattleMechanic {
+type atkMultiplier = (number) => number;
+
+function someMultiplier(atk) {
+    return atk * 3.3 + 35;
+}
+
+export function simpleAtkDmg(roll: rng, multiply: atkMultiplier = someMultiplier): BattleMechanic {
     return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
-        const rawDmg = atkOf(caster) * 3.3 + 35;
+        const rawDmg = multiply(atkOf(caster));
 
         const advMod = elementAdvMod(caster, target);
         const glancingChance = glanceChanceOf(caster) + advMod;
@@ -176,7 +182,7 @@ const dummySkill: SkillSpec = {
     }
 };
 
-const GenericSkills: Map<number, SkillSpec> = new Map([
+export const GenericSkills: Map<number, SkillSpec> = new Map([
     [1, dummySkill],
 ]);
 
@@ -187,13 +193,15 @@ function multistep(steps: SkillStep[]): SkillStep {
 }
 
 export class GenericSkill implements Ability {
+    id: number;
     multipliers: SkillMultipliers;
     target: Targeter;
     apply: SkillStep;
     cooldown: number = 0;
     maxCooldown: number;
 
-    constructor(meta: SkillMeta, target: Targeter, apply: SkillStep) {
+    constructor(id: number, meta: SkillMeta, target: Targeter, apply: SkillStep) {
+        this.id = id;
         const { cooldown, ...multipliers } = meta;
         this.multipliers = multipliers;
         this.maxCooldown = cooldown;
@@ -215,10 +223,12 @@ export class GenericSkill implements Ability {
     }
 }
 
+
 export function GetSkill(id: number): Ability {
     let spec: ?SkillSpec = GenericSkills.get(id);
     if (spec) {
         return new GenericSkill(
+            id,
             spec.meta,
             spec.target,
             multistep(spec.action),
