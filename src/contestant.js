@@ -16,6 +16,13 @@ export class TurnStarted {
     }
 }
 
+
+export class TurnEnded {
+    constructor(unit: Contestant) {
+        this.id = unit.id;
+    }
+}
+
 export class Tick {
     constructor(unit: Contestant) {
         this.id = unit.id;
@@ -26,6 +33,7 @@ export class Tick {
 export class DmgReceived {
     constructor(unit: Contestant, dmg) {
         this.id = unit.id;
+        this.dmg = dmg;
         this.currentHP = Math.max(0, Math.round(unit.currentHP - dmg));
     }
 }
@@ -53,6 +61,36 @@ export class UnitDied {
     }
 }
 
+export class EffectAdded {
+    constructor(unit: Contestant, effect) {
+        this.id = unit.id;
+        this.effect = effect;
+    }
+}
+export class EffectResisted {
+    constructor(unit: Contestant, effect) {
+        this.id = unit.id;
+        this.effect = effect;
+    }
+}
+
+export class EffectsDurationReduced {
+    id: string;
+    effects: Effect[];
+    constructor(unit: Contestant) {
+        this.id = unit.id;
+        this.effects = unit.effects.elements.map(e => {
+            if (e.duration) {
+                if (e.duration === 1) {
+                    return null;
+                }
+                return {...e, duration: e.duration - 1};
+            }
+            return e;
+        }).filter(e => e);
+    }
+}
+
 
 type Effect = {
     name: string,
@@ -72,34 +110,25 @@ class Effects {
         this.elements = elements;
     }
 
-    count() {
-        return this.elements.length;
-    }
-
     has(name: string) {
         return this.elements.find(el => el.name === name);
     }
 
+    hasInabilityEffects() {
+        return this.elements.filter(e => ['stun', 'sleep', 'freeze'].includes(e.name)).length > 0;
+    }
+
     add(e: Effect): void {
         if (this.has(e.name) && e.name !== 'dot') {
-            // increase duration
+            const existing = this.elements.find(effect => effect.name === e.name);
+            existing.duration = Math.max(existing.duration, e.duration);
         } else if (this.elements.length < 10) {
-            // add new effect
+            this.elements.push(e);
         }
     }
 
-    reduceDuration() {
-        this.elements = this.elements.map(e => ({
-            ...e,
-            duration: e.duration - 1,
-        })).filter(e => e.dungeon > 0)
-    }
-
-    increaseDuration() {
-        this.elements = this.elements.map(e => ({
-            ...e,
-            duration: e.duration + 1,
-        }))
+    hasTemporalEffects() {
+        return this.elements.filter(e => e.duration).length;
     }
 
     affecting(stat: string): Effect[] {
@@ -134,7 +163,7 @@ export default class Contestant {
     skills: Ability[];
 
     battle: BattleDispatcher;
-    effects: Effect[] = [];
+    effects: Effects;
 
     constructor(battle: BattleDispatcher, unit: OwnedUnit, skills: Ability[]) {
         this.battle = battle;
@@ -169,12 +198,35 @@ export default class Contestant {
         this.battle.causes(
             new TurnStarted(this)
         );
+
+        const canMove = !this.effects.hasInabilityEffects();
+        if (this.effects.hasTemporalEffects()) {
+            this.battle.causes(
+                new EffectsDurationReduced(this)
+            );
+        }
+
+        if (!canMove) {
+            this.battle.causes(new TurnEnded(this));
+        }
     }
 
     dmg(amount) {
         this.battle.causes(
             new DmgReceived(this, amount)
         );
+    }
+
+    affect(effects) {
+        effects.forEach((effect) => this.battle.causes(
+            new EffectAdded(this, effect)
+        ));
+    }
+
+    resist(effects) {
+        effects.forEach((effect) => this.battle.causes(
+            new EffectResisted(this, effect)
+        ));
     }
 
     die() {
@@ -192,12 +244,20 @@ export default class Contestant {
     }
 
     apply(event: Object) {
-        const { id, cooldowns, ...stats } = event;
+        const { id, cooldowns, dmg, effect, effects, ...stats } = event;
+        if (effects) {
+            this.effects = new Effects();
+            event.effects.forEach(e => this.effects.add(e));
+        }
 
         if (cooldowns) {
             for (const i in cooldowns) {
                 this.skills[i].cooldown = cooldowns[i];
             }
+        }
+
+        if (effect) {
+            this.effects.add(effect);
         }
 
         Object.assign(this, stats);

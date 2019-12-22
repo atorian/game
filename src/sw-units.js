@@ -5,6 +5,7 @@ export default {
     id: 12302,
     element: FIRE,
     hp: 6420,
+    // hp: 100,
     atk: 362,
     def: 527,
     spd: 88,

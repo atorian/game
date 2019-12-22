@@ -1,17 +1,7 @@
 {
   "presets": [
     "@babel/preset-flow",
-    [
-      "@babel/preset-env",
-      {
-        "targets": {
-          "esmodules": true,
-          "node": true,
-          "browsers": "last 2 Chrome versions"
-        },
-        "modules": false
-      }
-    ]
+    "@babel/preset-env"
   ],
   "plugins": [
     "@babel/plugin-proposal-class-properties"

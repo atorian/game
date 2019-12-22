@@ -1,4 +1,4 @@
-import { GenericSkills, simpleAtkDmg, step, targetEnemy } from "./skills";
+import { GenericSkills, simpleAtkDmg, debuf, step, targetEnemy } from "./skills";
 import _ from 'lodash';
 
 function roll() {
@@ -10,12 +10,12 @@ GenericSkills.set(3602, {
     action: [
         step(
             simpleAtkDmg(roll, (atk) => atk * 3.6),
-            // todo: stun
+            debuf(roll,'stun', 1, 15),
         ),
     ],
     meta: {
         dmg: 0.3,
-        effect: 0.25,
+        effect: 0.35,
         cooldown: 0,
     }
 });

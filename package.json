@@ -8,10 +8,9 @@
   "scripts": {
     "test": "mocha",
     "start": "webpack-dev-server",
-    "prebuild": "rm -rf ./webui/dist",
-    "build": "babel ./src -d ./webui/dist",
-    "flow": "flow",
-    "wrap": "webpack"
+    "prebuild": "rm -rf .dist",
+    "build": "webpack",
+    "flow": "flow"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +25,7 @@
     "webpack-dev-server": "^3.9.0"
   },
   "devDependencies": {
+    "@babel/register": "^7.7.7",
     "@babel/cli": "^7.7.5",
     "@babel/core": "^7.7.5",
     "@babel/node": "^7.7.4",

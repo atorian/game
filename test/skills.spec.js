@@ -1,9 +1,10 @@
+// @flow
 import { assert } from 'chai';
 import { before } from 'mocha'
-import { DARK, FIRE, LIGHT, WATER, WIND } from "../src";
-import { Elements, GenericSkill, GetSkill, simpleAtkDmg, step, targetEnemy } from "../src/skills";
-import Contestant from "../src/contestant";
-import { Battle } from "../src/battle";
+import { DARK, FIRE, LIGHT, WATER, WIND } from '../src';
+import { Elements, GenericSkill, simpleAtkDmg, step, targetEnemy, debuf } from '../src/skills';
+import Contestant from '../src/contestant';
+import { Battle } from '../src/battle';
 
 describe('Element Advantage', () => {
     it('fire has advantage over wind', () => {
@@ -81,6 +82,7 @@ describe('Generic Skill', () => {
             targetEnemy,
             step(
                 simpleAtkDmg(() => 1),
+                debuf(()=>100,'stun', 2),
             ),
         );
 
@@ -121,5 +123,48 @@ describe('Generic Skill', () => {
         skill.cast(caster, 'target-id', [caster, target]);
 
         assert.deepEqual(battle.units['target-id'].currentHP, 759);
+        assert.deepEqual(battle.units['target-id'].effects.elements, [{name: 'stun', duration: 2}]);
+    });
+});
+
+describe('debuf', () => {
+    const battle = null;
+    const target = new Contestant(battle, {
+        id: 'target-id',
+        player: 'player-1',
+        element: 'wind',
+        hp: 1000,
+        atk: 100,
+        def: 100,
+        spd: 100,
+        cr: 15,
+        cd: 75,
+        res: 0,
+        acc: 0,
+        skills: [1],
+    }, []);
+    const caster = new Contestant(battle, {
+        id: 'caster-id',
+        player: 'player-2',
+        element: 'wind',
+        hp: 1000,
+        atk: 100,
+        def: 100,
+        spd: 100,
+        cr: 15,
+        cd: 75,
+        res: 15,
+        acc: 100,
+        skills: [1],
+    }, []);
+
+    it('adds effect', () => {
+        const mechanic = debuf(() => 100, 'any-effect', 2);
+        let ctx = { effects: [], resisted: [] };
+
+        assert.deepEqual(mechanic(caster, target, { effect: 0, dmg: 0 }, ctx), {
+            effects:[{name:'any-effect', duration:2}],
+            resisted: [],
+        });
     });
 });

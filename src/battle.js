@@ -1,8 +1,11 @@
 import Contestant, {
     DmgReceived,
+    EffectAdded, EffectResisted,
+    EffectsDurationReduced,
     SkillCasted,
     Tick,
     TurnStarted,
+    TurnEnded,
     UnitDied,
 } from "./contestant";
 import { GetSkill } from "./skills";
@@ -46,12 +49,6 @@ class CurrentActiveUnit {
             skills[skillId] = unit.skills[skillId].cooldown;
             return skills;
         }, {});
-    }
-}
-
-class TurnEnded {
-    constructor(unit: Contestant) {
-        this.id = unit.id;
     }
 }
 
@@ -113,7 +110,7 @@ export class Battle {
         const next = units
             .filter(u => u.atb >= Battle.ATB_SIZE)
             .sort((a, b) => a.atb - b.atb)
-            .pop();
+            .shift();
 
         if (!next) return this.next();
         // @todo: clean up this
@@ -123,6 +120,7 @@ export class Battle {
     }
 
     cast(skillIdx, targetId) {
+        // todo: revisit this
         if (this.current.skills[skillIdx].cooldown === 0) {
             this.causes(new SkillUsed(skillIdx, targetId));
             this.causes(new TurnEnded(this.current));
@@ -158,16 +156,21 @@ export class Battle {
                 break;
             case TurnStarted:
                 this.current = this.units[event.id];
+            case EffectsDurationReduced:
             case DmgReceived:
             case Tick:
             case SkillCasted:
             case UnitDied:
+            case EffectAdded:
                 this.units[event.id].apply(event);
                 this.validateState();
                 break;
             case BattleEnded:
                 this.ended = true;
                 this.winner = event.winner;
+                break;
+            case EffectResisted:
+                // ok
                 break;
             default:
                 throw new Error(`Unknown Event: "${event.constructor.name}"`);
