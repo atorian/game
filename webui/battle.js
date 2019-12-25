@@ -4,6 +4,11 @@ import type { OwnedUnit, Unit } from "../src";
 import { FIRE } from "../src";
 import { Battle } from '../src/battle.js';
 import swunits from '../src/sw-units';
+import HpBar from './hp-bar';
+import AtkBar from './atk-bar';
+
+customElements.define('x-hp-bar', HpBar);
+customElements.define('x-atb', AtkBar);
 
 require('../src/sw-skills');
 
@@ -21,7 +26,6 @@ const missingSkillViewDetails = {
     icon: '',
     description: 'Missing Skill Description',
 };
-
 
 const uiTargetEnemy = Symbol('enemy');
 const uiTargetSelf = Symbol('self');
@@ -146,7 +150,7 @@ class ContestantVM {
 
     atb: number = 0;
     currentHP: number;
-    destroyedHP: number;
+    destroyedHP: number = 0;
 
     hp: number;
     atk: number;
@@ -163,7 +167,10 @@ class ContestantVM {
     isCurrent: boolean;
     isTarget: boolean;
 
-    constructor(battleData, displayData, isCurrent, isTarget) {
+    onTargeted: (id: string) => void;
+
+    constructor(battleData, displayData, isCurrent, isTarget, onTargeted) {
+        // todo: refactor this
         Object.assign(this, displayData, battleData, {
             isCurrent,
             isTarget,
@@ -172,8 +179,15 @@ class ContestantVM {
                 id: s.id,
                 cooldown: s.cooldown,
                 ...Skills.get(s.id),
-            }))
+            })),
+            onTargeted
         });
+    }
+
+    castSkill() {
+        if (this.isTarget) {
+            this.onTargeted(this.id);
+        }
     }
 }
 
@@ -198,7 +212,6 @@ function isTarget(skill, caster, unit) {
     return false;
 }
 
-// todo: should be an event dispatcher & trigger rerender
 class BattleVM {
     battle;
     _selectedSkill;
@@ -212,25 +225,29 @@ class BattleVM {
                 this.changed();
             }, 500);
         }
+        this.castSkillOn = this.castSkillOn.bind(this);
     }
 
-    changed: () => void;
+    _subscribers = [];
+
+    changed() {
+        this._subscribers.forEach(l => l());
+
+        if (!this.battle.current && !this.winnerText) {
+            setTimeout(() => {
+                if (this.battle.ended) {
+                    this.winnerText = this.battle.winner === 'player-1' ? 'VICTORY' : 'LOOSE';
+                } else {
+                    this.battle.next();
+                }
+                this.changed();
+            }, 500);
+        }
+    };
+
 
     onChange(callback) {
-        this.changed = () => {
-            callback();
-
-            if (!this.battle.current && !this.winnerText) {
-                setTimeout(() => {
-                    if (this.battle.ended) {
-                        this.winnerText = this.battle.winner === 'player-1' ? 'VICTORY' : 'LOOSE';
-                    } else {
-                        this.battle.next();
-                    }
-                    this.changed();
-                }, 500);
-            }
-        }
+        this._subscribers.push(callback);
     }
 
     isStarted() {
@@ -281,19 +298,22 @@ class BattleVM {
                     this.battle.units[k],
                     battleView[player][k],
                     this.battle.current && this.battle.current.id === k,
-                    isTarget(this.selectedSkill, this.battle.current, this.battle.units[k])
+                    isTarget(this.selectedSkill, this.battle.current, this.battle.units[k]),
+                    this.castSkillOn
                 )
             );
         }
         return res;
     }
 
-    contestant(player: string, unitId): ContestantVM {
+    contestant(unitId): ContestantVM {
+        let u = this.battle.units[unitId];
         return new ContestantVM(
-            this.battle.units[unitId],
-            battleView[player][unitId],
+            u,
+            battleView[u.player][unitId],
             this.battle.current && this.battle.current.id === unitId,
-            isTarget(this.selectedSkill, this.battle.current, this.battle.units[unitId])
+            isTarget(this.selectedSkill, this.battle.current, this.battle.units[unitId]),
+            this.castSkillOn
         );
     }
 
@@ -311,188 +331,205 @@ class BattleVM {
 }
 
 class SkillView extends HTMLElement {
-    skill: SkillVM;
+    root: ShadowRoot;
+    img: HTMLImageElement;
+    text: HTMLSpanElement;
+    _icon: string;
+    _cooldown: number;
 
-    constructor(skillVM: SkillVM) {
-        super();
-        this.skill = skillVM;
-        this.style.display = 'inline-block';
-        this.style.width = '40px';
-    }
-
-    connectedCallback() {
-        this.innerHTML = `
-        <style>
-            .skill {
-                line-height: 40px;
-                vertical-align: middle;
-                text-align: center;
-                width: 40px;
-                height: 40px;
-                position: relative;
-                overflow: visible;
-                border-radius: 5px;
-                border: 2px solid ghostwhite;
-                background-size: 40px 40px !important;
-                box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.75),
-                 inset 0px 0px 3px 1px rgba(255,255,255,0.75);
-            }
-            .skill-${this.skill.id} {
-                background: #000 url(${ASSETS_URL}${this.skill.icon}) no-repeat center;
-            }
-        </style>
-        <div class="skill skill-${this.skill.id}">
-            ${this.skill.cooldown > 0 ? `<div>${this.skill.cooldown}</div>` : ''}
-        </div>`;
-    }
-}
-
-customElements.define('x-skill', SkillView);
-
-class AttackBar extends HTMLElement {
     constructor() {
         super();
-        this.style.cssText = "display: block; width: 100%; height 10px; position: relative; text-align: center; line-height: 10px; color: black; font-size: 10px;"
         this.root = this.attachShadow({ mode: 'open' });
-    }
-
-    static get observedAttributes() {
-        return ['value'];
-    }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-        this.render();
-    }
-
-    render() {
-        const atb = 1 * this.getAttribute('value') || 0;
-        this.root.innerHTML = `
-            ${atb}
-            <div style="position: absolute; z-index:-1; top:0; left:0; height: 100%; width: ${Math.min(atb, 100)}%; background-color: deepskyblue;"></div>
-        `
-    }
-
-    connectedCallback() {
-        this.render();
-    }
-}
-
-customElements.define('x-atb', AttackBar);
-
-class HPBar extends HTMLElement {
-    constructor() {
-        super();
-        this.style.cssText = "position: relative; display: block; text-align: center; line-height: 20px; height: 20px; color: black; background-color: gray;";
-        this.root = this.attachShadow({ mode: 'open' });
-    }
-
-    static get observedAttributes() {
-        return ['current', 'destroyed', 'max'];
-    }
-
-    attributeChangedCallback(name, oldValue, newValue) {
-        this.render();
-    }
-
-    render() {
-        const max = 1 * this.getAttribute('max') || 0;
-        const current = 1 * this.getAttribute('current') || 0;
-        const destroyed = 1 * this.getAttribute('destroyed') || 0;
-        const hpP = Math.floor(current / (max - destroyed) * 100);
-        const destroyedP = Math.floor(destroyed / max * 100);
         this.root.innerHTML = `
             <style>
-            :host div {
-                position: absolute;
-            }
-            :host .value {
-                display: none;
-                width: 100%;
-                height: 100%;
-                color: white;
-                z-index: 1;
-                font-family: 'Helvetica, Arial';
-                text-align: center;
-                vertical-align: middle;
-            }
-            :host(:hover) .value {
-                display: block;
-            }
+                :host {
+                    position: relative;
+                    z-index: 2;
+                    display: inline-block;
+                    line-height: 40px;
+                    vertical-align: middle;
+                    text-align: center;
+                    width: 40px;
+                    height: 40px;
+                    overflow: hidden;
+                    border-radius: 5px;
+                    border: 2px solid ghostwhite;
+                    box-shadow: 0 0 5px 1px rgba(0,0,0,0.75),
+                                inset 0 0 3px 1px rgba(255,255,255,0.75);
+                    font-size: 30px;
+                    color: white;
+                }
+                :host img {
+                    position: absolute;
+                    height: 100%;
+                    z-index: -1;
+                    width: 100%;
+                    left: 0;
+                    top: 0;
+                }
+                @keyframes blink {
+                     0%   {
+                         filter: brightness(1);
+                         -webkit-filter: brightness(1);
+                     }
+                     50%  {
+                         filter: brightness(1.3);
+                         -webkit-filter: brightness(1.3);
+                     }
+                     100% {
+                         filter: brightness(1);
+                         -webkit-filter: brightness(1);
+                     }
+                 }
+                :host([selected]) {
+                    animation-name: blink;
+                    animation-duration: 1.5s;
+                    animation-iteration-count: infinite;
+                }
             </style>
-            <div style="position: absolute; z-index: 0; top:0; left:0; height: 100%; width: ${hpP}%; background-color: green;"></div>
-            <div style="position: absolute; top:0; right:0; height: 100%; width: ${destroyedP}%; background-color: red;"></div>
-            <div class="value">${Math.floor(current / (max - destroyed) * 100)}%</div>
-        `
+            <img src="${ASSETS_URL}/not_found.png"/>
+            <span></span>
+        `;
+        this.img = ((this.root.querySelector('img'): any): HTMLImageElement);
+        this.text = ((this.root.querySelector('span'): any): HTMLSpanElement);
     }
 
-    connectedCallback() {
-        this.render();
+    static get observedAttributes() {
+        return ['icon', 'cooldown'];
+    }
+
+    set selected(value) {
+        if (value) {
+            this.setAttribute('selected', '');
+        } else {
+            this.removeAttribute('selected');
+        }
+    }
+
+    get selected() {
+        return this.hasAttribute('selected');
+    }
+
+    set icon(value) {
+        this._icon = value;
+        this.img.src = `${ASSETS_URL}/${value}`;
+    }
+
+    get icon() {
+        return this._icon;
+    }
+
+    set cooldown(value) {
+        this._cooldown = value;
+        if (this._cooldown > 0) {
+            this.setAttribute('disabled', '');
+            this.text.innerText = this._cooldown;
+        } else {
+            this.removeAttribute('disabled');
+            this.text.innerText = '';
+        }
+    }
+
+    get cooldown() {
+        return this._cooldown;
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (name === 'icon') {
+            this.icon = newValue;
+        }
+        if (name === 'cooldown') {
+            this.cooldown = newValue;
+        }
     }
 }
 
-customElements.define('x-hp-bar', HPBar);
-
+customElements.define('sw-skill', SkillView);
 
 class ContestantView extends HTMLElement {
     unit: ContestantVM;
+    hpBar: HPBar;
+    atkBar: AttackBar;
+    root: ShadowRoot;
 
     constructor(unit: ContestantVM) {
         super();
         this.unit = unit;
-        this.style.cssText = 'display: block; width: 120px;';
-    }
-
-    update(unit: ContestantVM) {
-        this.unit = unit;
-
-        if (this.unit.isCurrent) {
-            this.style.backgroundColor = 'snow';
-        }
-
-        if (this.unit.isTarget) {
-            this.setAttribute('target', '')
-        } else {
-            this.removeAttribute('target');
-        }
-
-
-        this.querySelector('x-atb').setAttribute('value', this.unit.atb);
-        let hpBar = this.querySelector('x-hp-bar');
-        hpBar.setAttribute('max', this.unit.hp);
-        hpBar.setAttribute('current', this.unit.currentHP);
-        // todo: update destroyed hp
-
-        ['hp', 'atk', 'def', 'spd', 'cr', 'cd', 'acc', 'res'].forEach(stat => {
-            this.querySelector(`[data-stat="${stat}"]`).innerText = this.unit[stat];
-        });
-        // todo: update skill cooldowns
-        console.log('c events', this.unit.effects);
-        this.querySelector('.effects').innerHTML = this.unit.effects.map(effect => `<li class="effect effect-${effect.name}">${effect.duration}</li>`).join('')
-    }
-
-    showStats() {
-        this.querySelector('.stats').removeAttribute('hidden');
-        this.querySelector('.icon').setAttribute('hidden', '');
-    }
-
-    hideStats() {
-        this.querySelector('.stats').setAttribute('hidden', '');
-        this.querySelector('.icon').removeAttribute('hidden');
-    }
-
-    connectedCallback() {
-        this.innerHTML = `
+        this.root = this.attachShadow({ mode: 'open' });
+        this.root.innerHTML = `
             <style>
-                x-contestant[target]:hover {
-                    cursor: pointer;
+                @keyframes blink {
+                     0%   {
+                         filter: brightness(1);
+                         -webkit-filter: brightness(1);
+                     }
+                     50%  {
+                         filter: brightness(1.3);
+                         -webkit-filter: brightness(1.3);
+                     }
+                     100% {
+                         filter: brightness(1);
+                         -webkit-filter: brightness(1);
+                     }
                 }
-                x-contestant[target] .targetable{
+                :host {
+                    display: inline-block;
+                    position:relative;
+                    z-index: 1;
+                    width: 120px;
+                    padding: 3px;
+                }
+                .targetable img {
+                    width: 100%;
+                }
+                .targetable {
+                    position:relative;
+                    background: white;
+                    cursor: pointer;
                     animation-name: blink;
                     animation-duration: 1.5s;
                     animation-iteration-count: infinite;
                     box-shadow: 0 0 10px 0 red;
                 }
-                x-contestant .info {
+                :host([disabled]) .targetable {
+                    cursor: default;
+                    animation-name: none;
+                    box-shadow: none;
+                }
+                :host([current]) {
+                    
+                }
+                @keyframes spin { 
+                    from { 
+                        transform: rotate(0deg); 
+                    } to { 
+                        transform: rotate(360deg); 
+                    }
+                }
+                .circle {
+                    display: none;
+                }
+                :host([current]) .circle {
+                    color: transparent;
+                    filter: invert(1); 
+                    display: block;
+                    background-image: url("./magic-circle.png");
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    background-size: cover;
+                    position: absolute;
+                    width: 200px;
+                    height: 200px;
+                    left: 50%;
+                    top: -10px;
+                    margin-left: -100px;
+                    z-index: -1;
+                    animation-name: spin;
+                    animation-duration: 60s;
+                    animation-iteration-count: infinite;
+                    animation-timing-function: linear;
+                }
+                .info {
                     display: block;
                     position:absolute;
                     bottom: 0;
@@ -504,6 +541,7 @@ class ContestantView extends HTMLElement {
                     text-align: center;
                     font-font: Helvetica, Arial;
                     font-weight: bold;
+                    z-index: 1;
                 }
                 .stats .dl {
                     display: none;
@@ -556,14 +594,22 @@ class ContestantView extends HTMLElement {
                     background: url("https://swarfarm.com/static/herders/images/buffs/debuff_stun.png") no-repeat;
                     background-size: 30px 30px;
                 }
-                
+                .skills {
+                    margin-top: 5px;
+                }
+                x-atb {
+                    z-index:5;
+                }
             </style>
+            <div class="circle"></div>
+            <x-hp-bar max="${this.unit.hp}" current="${this.unit.currentHP}" destroyed="0" ></x-hp-bar>
+            <x-atb value="${this.unit.atb}"></x-atb>
             <div class="targetable">
-                <x-hp-bar max="${this.unit.hp}" current="${this.unit.currentHP}" destroyed="0" ></x-hp-bar>
-                <x-atb value="${this.unit.atb}"></x-atb>
                 <div class="icon">
-                    <ul class="effects">${this.unit.effects.map(effect => `<li class="effect effect-${effect.name}">${effect.duration}</li>`).join('')}</ul>
-                    <img src="${ASSETS_URL}${this.unit.icon}" alt="${this.unit.name}" class="unit-icon" style="width: 100%;">
+                    <ul class="effects">
+                        ${this.unit.effects.map(effect => `<li class="effect effect-${effect.name}">${effect.duration}</li>`)}
+                    </ul>
+                    <img src="${ASSETS_URL}${this.unit.icon}" alt="${this.unit.name}" class="unit-icon"/>
                 </div>
                 <dl class="stats" hidden>
                     <dt>HP</dt><dd data-stat="hp">${this.unit.hp}</dd>
@@ -577,22 +623,61 @@ class ContestantView extends HTMLElement {
                 </dl>
                 <div class="info">i</div>
             </div>
+            <div class="skills">
+                ${this.unit.skills.map(s => `<sw-skill icon="${s.icon}" cooldown="${s.cooldown}" description="${s.description}"/>`)}
+            </div>
         `;
 
-        const infoIcon = this.querySelector('.info');
+        this.hpBar = this.root.querySelector('x-hp-bar');
+        this.atkBar = this.root.querySelector('x-atb');
+
+        this.root.querySelector('.targetable').addEventListener('click', () => this.unit.castSkill());
+
+        const infoIcon = this.root.querySelector('.info');
 
         infoIcon.onmouseover = () => this.showStats();
         infoIcon.onmouseout = () => this.hideStats();
+    }
 
-        const skills = document.createElement('div');
-        skills.className = "skills";
-        skills.style.marginTop = '3px';
-        // todo: revisit this
-        for (const skill of this.unit.skills) {
-            skills.appendChild(new SkillView(skill));
+    update(unit: ContestantVM) {
+        this.unit = unit;
+
+        if (this.unit.isCurrent) {
+            this.setAttribute('current', '');
+        } else {
+            this.removeAttribute('current');
         }
 
-        this.appendChild(skills);
+        if (this.unit.isTarget) {
+            this.removeAttribute('disabled');
+        } else {
+            this.setAttribute('disabled', '');
+        }
+
+        this.atkBar.value = this.unit.atb;
+
+        this.hpBar.value = this.unit.currentHP;
+        this.hpBar.destroyed = this.unit.destroyedHP;
+        this.hpBar.max = this.unit.hp;
+
+        ['hp', 'atk', 'def', 'spd', 'cr', 'cd', 'acc', 'res'].forEach(stat => {
+            this.root.querySelector(`[data-stat="${stat}"]`).innerText = this.unit[stat];
+        });
+
+        // todo: update skill cooldowns
+        this.root.querySelector('.effects').innerHTML = this.unit.effects.map(
+            effect => `<li class="effect effect-${effect.name}">${effect.duration}</li>`
+        ).join('')
+    }
+
+    showStats() {
+        this.root.querySelector('.stats').removeAttribute('hidden');
+        this.root.querySelector('.icon').setAttribute('hidden', '');
+    }
+
+    hideStats() {
+        this.root.querySelector('.stats').setAttribute('hidden', '');
+        this.root.querySelector('.icon').removeAttribute('hidden');
     }
 }
 
@@ -600,183 +685,115 @@ customElements.define('x-contestant', ContestantView);
 
 class GuildBattleView extends HTMLElement {
     _battle: BattleVM;
-    teamA: HTMLElement; // sub view
-    teamB: HTMLElement; // sub view
-    battleLog: HTMLTextAreaElement;  // sub view
-    info: HTMLElement;  // sub view
-    availableSkills: HTMLElement;
+    info: HTMLParagraphElement;
+    root: ShadowRoot;  // sub view
+    skills: HTMLUListElement;
+    units: { string: ContestantView } = {};
 
     constructor(battleVM) {
         super();
         this._battle = battleVM;
-        this.teamA = this._renderTeam('player-1', (this._battle.teamA));
-        this.teamB = this._renderTeam('player-2', (this._battle.teamB));
 
-        this.info = document.createElement('p');
-        this.info.style.cssText = 'height: 200px; overflow-y: scroll; marging: 0;';
-        this.info.setAttribute('hidden', '');
+        this.root = this.attachShadow({ mode: 'open' });
 
-        this._battle.onChange(() => this.update())
+        this.root.innerHTML = `
+            <style>
+            p {
+                position: absolute;
+                width: 200px;
+                margin: 10px auto;
+                text-align: left;
+                overflow-y: scroll;
+                font-family: Helvetica, Arial;
+                color: white;
+                left: 50%;
+                margin-left: -100px;
+                top: 45%;
+            }
+            textarea {
+                height: 200px;
+                width: 100%;
+                border: none;
+                padding: 0;
+            }
+            nav {
+                position: relative;
+                height: 44px;
+                z-index: 1;
+            }
+            @keyframes scale {
+                0%   {
+                    transform: scale(1);
+                }
+                50%  {
+                    transform: scale(0.8);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+            nav :active {
+                 animation-name: scale;
+                 animation-duration: 0.3s;
+                 animation-iteration-count: 1;
+            }
+            nav {
+                margin: 30px 0;
+                text-align: center;
+            }
+            
+            div {
+                text-align: center;
+                padding-top: 40px;
+            }
+            </style>
+            <div data-team="player-2"></div>
+            <nav></nav>
+            <div data-team="player-1"></div>
+            <p></p>
+            <div id="result-screen"></div>
+        `;
+        this.info = this.root.querySelector('p');
+        let node = this.root.querySelector('[data-team="player-2"]');
+        for (const u of this._battle.teamB) {
+            this.units[u.id] = new ContestantView(u);
+            node.appendChild(this.units[u.id]);
+        }
+        node = this.root.querySelector('[data-team="player-1"]');
+        for (const u of this._battle.teamA) {
+            this.units[u.id] = new ContestantView(u);
+            node.appendChild(this.units[u.id]);
+        }
+
+        this.skills = this.root.querySelector('nav');
+
+        this._battle.onChange(() => this.update());
+    }
+
+    _showSkillInfo(description: string) {
+        this.info.textContent = description;
+    }
+
+    _hideSkillInfo() {
+        this.info.textContent = '';
     }
 
     update() {
-        this.battleLog.value = this._battle.log.join('\n');
-        this.battleLog.scrollTop = this.battleLog.scrollHeight;
-
-        const contestants = this.querySelectorAll('x-contestant');
-        contestants.forEach((c: ContestantView) => c.onclick = null);
-
-        for (let player of ['player-1', 'player-2']) {
-            this.querySelectorAll(`[data-team="${player}"] x-contestant`).forEach(cv => {
-                cv.update(this._battle.contestant(player, cv.unit.id));
-            });
+        for (const id in this.units) {
+            this.units[id].update(
+                this._battle.contestant(id)
+            );
         }
-
-        const targets = this.querySelectorAll('x-contestant[target]');
-        targets.forEach(t => t.onclick = () => this._battle.castSkillOn(t.unit.id));
-
-        this.availableSkills.innerHTML = '';
+        this.skills.innerHTML = '';
         for (const skill of this._battle.availableSkills) {
-            let skillView = new SkillView(skill);
-            if (skill.id === this._battle.selectedSkill.id) {
-                skillView.className = 'selected';
-            }
+            let skillView = new SkillView();
+            skillView.icon = skill.icon;
+            skillView.cooldown = skill.cooldown;
+            skillView.selected = skill.id === this._battle.selectedSkill.id;
             skillView.onclick = () => this._battle.selectSkill(skill.id);
-            this.availableSkills.appendChild(skillView);
-        }
-
-        if (this._battle.winnerText) {
-            this.info.textContent = this._battle.winnerText;
-            this.info.removeAttribute('hidden');
-            this.info.style.fontSize = '90px';
-            this.info.style.color = 'red';
-            this.info.style.margin = '0';
-            this.info.style.height = '120px';
-            this.querySelector('.container').scrollTop = 300;
-            this.querySelectorAll('x-skill').forEach((s: SkillView) => {
-                s.onmouseover = null;
-                s.onmouseout = null;
-            });
-        } else {
-            let skills = this.querySelectorAll('.available-skills x-skill');
-            skills.forEach((s: SkillView) => {
-                s.onmouseover = () => this._showSkillInfo(s.skill);
-                s.onmouseout = this._showBattleLog.bind(this);
-            });
-        }
-    }
-
-    _renderTeam(player, team) {
-        const container = document.createElement("div");
-        container.setAttribute('data-team', player);
-        container.innerHTML = '';
-        for (const u of team) {
-            container.appendChild(new ContestantView(u));
-        }
-        return container;
-    }
-
-    _showSkillInfo(skill: SkillVM) {
-        this.battleLog.setAttribute('hidden', '');
-        this.info.removeAttribute('hidden');
-        this.info.textContent = skill.description;
-    }
-
-    _showBattleLog() {
-        this.info.setAttribute('hidden', '');
-        this.info.textContent = '';
-        this.battleLog.removeAttribute('hidden');
-    }
-
-    connectedCallback() {
-        if (this._battle.isStarted()) {
-            this.battleLog = document.createElement('textarea');
-            this.battleLog.style.height = '200px';
-            this.battleLog.style.width = '100%';
-            this.battleLog.style.border = 'none';
-            this.battleLog.style.padding = '0';
-
-            this.battleLog.value = this._battle.log.join('\n');
-            this.battleLog.scrollTop = this.battleLog.scrollHeight;
-
-            let container = document.createElement('div');
-            container.className = "container";
-            container.style.cssText = 'height: 200px; overflow-y: auto; width: 400px';
-            this.appendChild(this.teamB);
-            container.appendChild(this.battleLog);
-            container.appendChild(this.info);
-            this.appendChild(container);
-            this.appendChild(this.teamA);
-
-            let skills = this.querySelectorAll('x-skill');
-            skills.forEach((s: SkillView) => {
-                s.onmouseover = () => this._showSkillInfo(s.skill);
-                s.onmouseout = this._showBattleLog.bind(this);
-            });
-
-            this.availableSkills = document.createElement('ul');
-            this.availableSkills.className = "available-skills";
-
-            this.styles = document.createElement('style');
-            this.styles.innerHTML = `
-                .skill {
-                    line-height: 40px;
-                    vertical-align: middle;
-                    text-align: center;
-                    width: 40px;
-                    height: 40px;
-                    position: relative;
-                    overflow: visible;
-                    border-radius: 5px;
-                    border: 2px solid ghostwhite;
-                    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.75),
-                     inset 0px 0px 3px 1px rgba(255,255,255,0.75);
-                    background-size: 40px 40px !important;
-                }
-                .selected .skill {
-                    animation-name: blink;
-                    animation-duration: 1.5s;
-                    animation-iteration-count: infinite;
-                }
-                @keyframes blink {
-                    0%   {
-                        filter: brightness(1);
-                        -webkit-filter: brightness(1);
-                    }
-                    50%  {
-                        filter: brightness(1.3);
-                        -webkit-filter: brightness(1.3);
-                    }
-                    100% {
-                        filter: brightness(1);
-                        -webkit-filter: brightness(1);
-                    }
-                }
-                .available-skills .skill:active {
-                    animation-name: scale;
-                    transform-origin: center center;
-                    animation-duration: 0.3s;
-                }
-                @keyframes scale {
-                    0%   {
-                        transform: scale(1);
-                    }
-                    50%  {
-                        transform: scale(0.8);
-                    }
-                    100% {
-                        transform: scale(1);
-                    }
-                }
-            `;
-            this.appendChild(this.styles);
-            for (const skill in this._battle.availableSkills) {
-                this.availableSkills.appendChild(new SkillView(skill));
-            }
-            this.appendChild(this.availableSkills);
-
-        } else {
-            this.innerHTML = `<div>Battle is not jet Started</div>`;
+            skillView.onmouseover = () => this._showSkillInfo(skill.description);
+            skillView.onmouseout = () => this._hideSkillInfo();
+            this.skills.appendChild(skillView);
         }
     }
 }
@@ -788,6 +805,19 @@ if (container) {
     let battleVM = new BattleVM('some-id');
     let battleView = new GuildBattleView(battleVM);
     container.appendChild(battleView);
+    const log = document.getElementById('battle-log');
+    battleVM.onChange(() => {
+        log.value = battleVM.log.join('\n');
+        log.scrollTop = log.scrollHeight;
+    });
+
+    const victoryPopup = document.getElementById('victory');
+    battleVM.onChange(() => {
+        if (battleVM.winnerText) {
+            victoryPopup.innerText = battleVM.winnerText;
+            victoryPopup.removeAttribute('hidden');
+        }
+    });
 } else {
     alert(`Container element with ID=${battle} missing in the DOM`)
 }
