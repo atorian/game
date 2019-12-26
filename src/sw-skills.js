@@ -14,8 +14,8 @@ GenericSkills.set(3602, {
         ),
     ],
     meta: {
-        dmg: 0.3,
-        effect: 0.35,
+        dmg: 30,
+        effect: 35,
         cooldown: 0,
     }
 });

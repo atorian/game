@@ -86,7 +86,9 @@ type HitContext = {
     dmg?: number,
     isCrit?: boolean,
     isGlance?: boolean,
-    effects: Object[],
+    isCrush?: boolean,
+    effectsAdded: Object[],
+    effectsRemoved: Object[],
     resisted: Object[],
 }
 
@@ -107,15 +109,17 @@ function glancedDmg(rawDmg: number, caster: Contestant, target: Contestant): num
     return rawDmg - rawDmg * 0.3 - (Elements.hasDisadvantage(caster, target) ? rawDmg * 0.16 : 0);
 }
 
-function critDmg(rawDmg: number, multipliers: SkillMultipliers, cd: number) {
-    return rawDmg * (100 + multipliers.dmg + cd) / 100;
+function critDmg(rawDmg: number, multipliers: SkillMultipliers, cd: number): number {
+    let multiplier = (100 + multipliers.dmg + cd) / 100;
+    console.log(rawDmg, multiplier, rawDmg * multiplier);
+    return rawDmg * multiplier;
 }
 
-function crashedDmg(rawDmg: number, multipliers: SkillMultipliers) {
+function crashedDmg(rawDmg: number, multipliers: SkillMultipliers): number {
     return rawDmg * (100 + multipliers.dmg + 30) / 100;
 }
 
-function normalDmg(rawDmg: number, multipliers: SkillMultipliers) {
+function normalDmg(rawDmg: number, multipliers: SkillMultipliers): number {
     return rawDmg * (100 + multipliers.dmg) / 100;
 }
 
@@ -130,7 +134,7 @@ export function debuf(roll: rng, effectName: string, duration: number, baseChanc
         const activationChance = baseChance + multipliers.effect;
         if (!ctx.isGlance && roll() <= activationChance) {
             if (roll() > Math.max(15, target.res - caster.acc)) {
-                ctx.effects.push({ name: effectName, duration: 1 * duration });
+                ctx.effectsAdded.push({ name: effectName, duration: 1 * duration });
             } else {
                 ctx.resisted.push({ name: effectName });
             }
@@ -142,7 +146,6 @@ export function debuf(roll: rng, effectName: string, duration: number, baseChanc
 export function simpleAtkDmg(roll: rng, multiply: atkMultiplier = someMultiplier): BattleMechanic {
     return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
         const rawDmg = multiply(atkOf(caster));
-
         const advMod = elementAdvMod(caster, target);
         const glancingChance = glanceChanceOf(caster) + advMod;
         const critChance = critChanceOf(caster) - antiCritChanceOf(target) + advMod;
@@ -154,10 +157,10 @@ export function simpleAtkDmg(roll: rng, multiply: atkMultiplier = someMultiplier
             dmg = glancedDmg(rawDmg, caster, target);
         } else if (n <= critChance) { // crit
             isCrit = true;
-            dmg = critDmg(rawDmg, multipliers, caster.cd) * dmgReducton(target);
+            dmg = critDmg(rawDmg, multipliers, caster.cd);
         } else if (n <= advMod) { // crush
             isCrush = true;
-            dmg = crashedDmg(rawDmg, multipliers) * dmgReducton(target);
+            dmg = crashedDmg(rawDmg, multipliers);
         } else { // normal
             dmg = normalDmg(rawDmg, multipliers);
         }
@@ -172,15 +175,21 @@ export function simpleAtkDmg(roll: rng, multiply: atkMultiplier = someMultiplier
     }
 }
 
+function kindOfDmg(hit: HitContext) {
+    if (hit.isCrit) return 'crit';
+    if (hit.isCrush) return 'crushing';
+    if (hit.isGlance) return 'glancing';
+    return 'normal'
+}
 
 export function step(...mechanics: BattleMechanic[]): SkillStep {
     return (caster: Contestant, target: Contestant, meta: SkillMultipliers) => {
         const hit: HitContext = mechanics.reduce((ctx: HitContext, m: BattleMechanic) => {
             return m(caster, target, meta, ctx);
-        }, { effects: [], resisted: [] });
-
-        if (hit.dmg) target.dmg(hit.dmg);
-        if (hit.effects.length) target.affect(hit.effects);
+        }, { effectsAdded: [], effectsRemoved: [], resisted: [] });
+        // todo: shields used
+        if (hit.dmg) target.dmg(hit.dmg, kindOfDmg(hit));
+        if (hit.effectsAdded.length) target.affect(hit.effectsAdded);
         if (hit.resisted.length) target.resist(hit.resisted);
     }
 }

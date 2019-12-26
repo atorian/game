@@ -168,8 +168,9 @@ class ContestantVM {
     isTarget: boolean;
 
     onTargeted: (id: string) => void;
+    _events: Object[];
 
-    constructor(battleData, displayData, isCurrent, isTarget, onTargeted) {
+    constructor(battleData, displayData, isCurrent, isTarget, onTargeted, events) {
         // todo: refactor this
         Object.assign(this, displayData, battleData, {
             isCurrent,
@@ -180,14 +181,37 @@ class ContestantVM {
                 cooldown: s.cooldown,
                 ...Skills.get(s.id),
             })),
-            onTargeted
+            onTargeted,
         });
+
+        this._events = events;
     }
 
     castSkill() {
         if (this.isTarget) {
             this.onTargeted(this.id);
         }
+    }
+
+    get events() {
+        let events = [];
+        // removed effects do not appier to indicate themselfs in the text messages
+        for (let e of this._events) {
+            if (e.dmg) {
+                events.push({ text: e.dmg, type: 'harmful' });
+                if (e.kind !== 'normal') {
+                    events.push({ text: e.kind });
+                }
+            }
+            if (e.effect) {
+                events.push({ text: e.effect.name, type: 'harmful' });
+            }
+            if (e.resisted) {
+                events.push({ text: 'resisted', type: 'beneficial' });
+            }
+        }
+
+        return events;
     }
 }
 
@@ -216,6 +240,7 @@ class BattleVM {
     battle;
     _selectedSkill;
     winnerText: string;
+    _events: Object[];
 
     constructor(battleId: string) {
         this.battle = battles[battleId];
@@ -231,6 +256,9 @@ class BattleVM {
     _subscribers = [];
 
     changed() {
+        this._events = this.battle.events;
+        this.battle.events = [];
+
         this._subscribers.forEach(l => l());
 
         if (!this.battle.current && !this.winnerText) {
@@ -313,7 +341,8 @@ class BattleVM {
             battleView[u.player][unitId],
             this.battle.current && this.battle.current.id === unitId,
             isTarget(this.selectedSkill, this.battle.current, this.battle.units[unitId]),
-            this.castSkillOn
+            this.castSkillOn,
+            this._events.filter(e => e.id === u.id),
         );
     }
 
@@ -326,7 +355,7 @@ class BattleVM {
     }
 
     get log(): string[] {
-        return this.battle.events.map(interpretEvent).filter(e => e);
+        return this._events.map(interpretEvent).filter(e => e);
     }
 }
 
@@ -472,6 +501,7 @@ class ContestantView extends HTMLElement {
                          -webkit-filter: brightness(1);
                      }
                 }
+                
                 :host {
                     display: inline-block;
                     position:relative;
@@ -600,6 +630,65 @@ class ContestantView extends HTMLElement {
                 x-atb {
                     z-index:5;
                 }
+                @keyframes fadeout {
+                    from { 
+                        opacity: 1;
+                        transform: scale(1);      
+                    }
+                    to   { 
+                        opacity: 0.5;
+                        transform: scale(0.5); 
+                    }
+                }
+                @keyframes fly-out {
+                    0% {
+                        font-size: 16px;
+                        top: 0%;
+                        opacity: 0;
+                    }
+                    10% {
+                        top: 20%;
+                        opacity: 1;
+                    }
+                    80% {
+                        top: 40%;
+                        opacity: 1;
+                    } 
+                    100% {
+                        opacity: 0;
+                        top: 100%;
+                    }
+                }
+                .delta {
+                    font-weight: bold;
+                    position: absolute;
+                    overflow: hidden;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                }
+                .delta div {
+                    font-family: Helvetica, Arial;
+                    animation: fly-out;
+                    animation-duration: 500ms;
+                    animation-iteration-count: 1;
+                    animation-timing-function: linear;
+                    top: 100%;
+                    opacity: 0;
+                    position: absolute;
+                    color: yellow;
+                    font-size: 40px;
+                    width: 100%;
+                    text-align: center;
+                    text-shadow: 0 0 5px black;
+                }
+                .delta .beneficial {
+                    color: limegreen;
+                }
+                .delta .harmful {
+                    color: red;
+                }
             </style>
             <div class="circle"></div>
             <x-hp-bar max="${this.unit.hp}" current="${this.unit.currentHP}" destroyed="0" ></x-hp-bar>
@@ -622,6 +711,8 @@ class ContestantView extends HTMLElement {
                     <dt>ACC</dt><dd data-stat="acc">${this.unit.acc}</dd>
                 </dl>
                 <div class="info">i</div>
+                <div class="delta">
+                </div>
             </div>
             <div class="skills">
                 ${this.unit.skills.map(s => `<sw-skill icon="${s.icon}" cooldown="${s.cooldown}" description="${s.description}"/>`)}
@@ -633,15 +724,29 @@ class ContestantView extends HTMLElement {
 
         this.root.querySelector('.targetable').addEventListener('click', () => this.unit.castSkill());
 
+        this.delta = this.root.querySelector('.delta');
         const infoIcon = this.root.querySelector('.info');
-
         infoIcon.onmouseover = () => this.showStats();
         infoIcon.onmouseout = () => this.hideStats();
     }
 
     update(unit: ContestantVM) {
         this.unit = unit;
+        let pendingEvents = this.unit.events;
 
+        console.log('pendingEvents', pendingEvents[0], pendingEvents[1]);
+        this.delta.innerHTML = '';
+        pendingEvents.forEach((event, i) => {
+            if (event.text) {
+                let d = document.createElement('div');
+                d.className = event.type;
+                d.innerText = event.text;
+                d.style.cssText = `animation-delay: ${500 / pendingEvents.length * i}ms`;
+                this.delta.appendChild(d);
+            }
+        });
+
+        // debugger;
         if (this.unit.isCurrent) {
             this.setAttribute('current', '');
         } else {
@@ -741,7 +846,7 @@ class GuildBattleView extends HTMLElement {
                 margin: 30px 0;
                 text-align: center;
             }
-            
+
             div {
                 text-align: center;
                 padding-top: 40px;
@@ -807,7 +912,7 @@ if (container) {
     container.appendChild(battleView);
     const log = document.getElementById('battle-log');
     battleVM.onChange(() => {
-        log.value = battleVM.log.join('\n');
+        log.value = log.value + battleVM.log.join('\n');
         log.scrollTop = log.scrollHeight;
     });
 

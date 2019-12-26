@@ -31,9 +31,10 @@ export class Tick {
 }
 
 export class DmgReceived {
-    constructor(unit: Contestant, dmg) {
+    constructor(unit: Contestant, dmg, kind) {
         this.id = unit.id;
         this.dmg = dmg;
+        this.kind = kind;
         this.currentHP = Math.max(0, Math.round(unit.currentHP - dmg));
     }
 }
@@ -70,7 +71,7 @@ export class EffectAdded {
 export class EffectResisted {
     constructor(unit: Contestant, effect) {
         this.id = unit.id;
-        this.effect = effect;
+        this.resisted = effect;
     }
 }
 
@@ -155,7 +156,8 @@ export default class Contestant {
     acc: number;
 
     // glancing rate
-    gr: number;
+    gr: number = 0;
+    antiCr: number = 0;
 
     // todo: could use state pattern by implementing DeadContestant and AliveContestant
     dead: false;
@@ -211,9 +213,9 @@ export default class Contestant {
         }
     }
 
-    dmg(amount) {
+    dmg(amount, kind) {
         this.battle.causes(
-            new DmgReceived(this, amount)
+            new DmgReceived(this, amount, kind)
         );
     }
 
