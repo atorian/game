@@ -1,11 +1,12 @@
 import { WATER, FIRE, WIND, DARK, LIGHT } from "./index";
+import swkills from './sw-skills';
+
 
 export default {
   12302: {
     id: 12302,
     element: FIRE,
     hp: 6420,
-    // hp: 100,
     atk: 362,
     def: 527,
     spd: 88,

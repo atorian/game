@@ -1,9 +1,12 @@
 const path = require('path');
 
 module.exports = {
-    entry: './webui/battle.js',
+    entry: {
+        battle: './webui/battle.js',
+        teams: './webui/make-teams.js'
+    },
     output: {
-        filename: 'main.js',
+        filename: '[name].js',
         path: path.resolve(__dirname, 'dist'),
     },
     module: {

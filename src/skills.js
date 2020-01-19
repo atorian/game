@@ -148,7 +148,16 @@ export function simpleAtkDmg(roll: rng, multiply: atkMultiplier = someMultiplier
         const rawDmg = multiply(atkOf(caster));
         const advMod = elementAdvMod(caster, target);
         const glancingChance = glanceChanceOf(caster) + advMod;
-        const critChance = critChanceOf(caster) - antiCritChanceOf(target) + advMod;
+        const hasAdvantage = Elements.hasAdvantage(caster, target);
+        const hasDisadvantage = Elements.hasDisadvantage(caster, target);
+
+        let critChance = critChanceOf(caster) - antiCritChanceOf(target);
+        if (hasAdvantage) {
+            critChance = Math.max(critChance + 15, 100);
+        } else if(hasDisadvantage) {
+            critChance = Math.min(critChance, 85);
+        }
+
         let isCrit = false, isGlance = false, isCrush = false, dmg;
 
         const n = roll();

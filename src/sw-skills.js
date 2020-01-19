@@ -11,7 +11,7 @@ GenericSkills.set(3602, {
         step(
             simpleAtkDmg(roll, (atk) => atk * 3.6),
             debuf(roll,'stun', 1, 15),
-        ),
+        )
     ],
     meta: {
         dmg: 30,

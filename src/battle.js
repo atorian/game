@@ -12,7 +12,7 @@ import { GetSkill } from "./skills";
 import type { Unit } from "./index";
 import { GloryTowers, GuildFlags } from "./towers";
 
-class BattleStarted {
+export class BattleStarted {
     constructor(battleId, type, teamA, teamB) {
         this.id = battleId;
         this.type = type;
@@ -21,7 +21,7 @@ class BattleStarted {
     }
 }
 
-class SkillUsed {
+export class SkillUsed {
     constructor(skillId, targetId) {
         this.skillId = skillId;
         this.targetId = targetId;
@@ -52,14 +52,14 @@ class CurrentActiveUnit {
     }
 }
 
-class BattleEnded {
+export class BattleEnded {
     constructor(winner) {
         this.ended = true;
         this.winner = winner;
     }
 }
 
-export class Battle {
+export default class Battle {
 
     static SCENARIO: string = 'scenario';
     static ARENA: string = 'arena';

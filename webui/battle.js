@@ -1,18 +1,15 @@
 // @flow
-import uuid from "uuid/v4";
-import type { OwnedUnit, Unit } from "../src";
+import type { Unit } from "../src";
 import { FIRE } from "../src";
-import { Battle } from '../src/battle.js';
-import swunits from '../src/sw-units';
+// import swunits from '../src/sw-units';
 import HpBar from './hp-bar';
 import AtkBar from './atk-bar';
+import * as app from '../src/app';
 
 customElements.define('x-hp-bar', HpBar);
 customElements.define('x-atb', AtkBar);
 
 require('../src/sw-skills');
-
-const battle = new Battle('some-id');
 
 const Units = new Map();
 Units.set(12302, {
@@ -39,56 +36,17 @@ Skills.set(3602, {
     target: uiTargetEnemy,
 });
 
-function playerTeam(units: { [string]: Unit }, player): OwnedUnit {
-    let res = Array(Object.keys(units).length - 1);
-    for (let id in units) {
-        res.push({ ...units[id], id, player });
-    }
-    return res;
-}
-
-type Team = {
-    player: string,
-    units: { [string]: Unit },
-};
-
-function prepareTeam(units: Unit[]) {
-    return units.reduce((carry, u) => {
-        carry[uuid()] = u;
-        return carry;
-    }, {});
-}
-
-function displayTeam(units: { [string]: Unit }) {
+function displayTeam(units: Unit[]) {
     let res = {};
-    for (let k in units) {
-        const unit = units[k];
-        res[k] = {
-            id: unit.id,
+    for (let unit of units) {
+        res[unit.id] = {
+            id: unit.unitId * 1,
             skills: unit.skills,
-            ...Units.get(unit.id),
+            ...Units.get(unit.unitId * 1),
         };
     }
     return res;
 }
-
-// todo: map contestant to display info...
-let teamA: Team = { player: 'player-1', units: prepareTeam([swunits["12302"]]) };
-let teamB: Team = { player: 'player-2', units: prepareTeam([swunits["12302"]]) };
-
-battle.start(
-    playerTeam(teamA.units, teamA.player),
-    playerTeam(teamB.units, teamB.player),
-);
-
-const battleView = {
-    [teamA.player]: displayTeam(teamA.units),
-    [teamB.player]: displayTeam(teamB.units),
-};
-
-const battles = {
-    'some-id': battle,
-};
 
 const ASSETS_URL = 'https://swarfarm.com/static/herders/images/';
 
@@ -102,33 +60,10 @@ const missingUnitViewDetails = {
     icon: 'link to 404',
 };
 
-
 const elColors = {
     [FIRE]: "#ff0000",
 };
 
-function interpretEvent(e) {
-    const type = e.constructor.name;
-
-    switch (type) {
-        case 'BattleStarted':
-            return "Battle Started";
-        case 'Tick':
-            return null;
-        case 'GloryTowersApplied':
-            const { id, ...rest } = e;
-            if (Object.keys(rest).length > 0) {
-                return `${e.constructor.name}: ${JSON.stringify(e, null, 2)}`;
-            }
-            return null;
-        case 'TurnStarted':
-            const player = battle.units[e.id].player;
-            const unit = battleView[player][e.id];
-            return `${unit.name} of ${player} starts turn`;
-        default:
-            return `${e.constructor.name}: ${JSON.stringify(e, null, 2)}`;
-    }
-}
 
 type effectVM = {
     id: number,
@@ -238,19 +173,29 @@ function isTarget(skill, caster, unit) {
 
 class BattleVM {
     battle;
+    battleView;
     _selectedSkill;
     winnerText: string;
     _events: Object[];
 
     constructor(battleId: string) {
-        this.battle = battles[battleId];
+        this.battle = app.getBattle(battleId);
         if (!this.battle.current) {
             setTimeout(() => {
                 this.battle.next();
                 this.changed();
             }, 500);
         }
+
+        const units = Object.values(this.battle.units);
+
+        this.battleView = {
+            attacker: displayTeam(units.filter(u => u.player === 'attacker')),
+            defender: displayTeam(units.filter(u => u.player === 'defender')),
+        };
+
         this.castSkillOn = this.castSkillOn.bind(this);
+        this.interpretEvent = this.interpretEvent.bind(this);
     }
 
     _subscribers = [];
@@ -264,7 +209,7 @@ class BattleVM {
         if (!this.battle.current && !this.winnerText) {
             setTimeout(() => {
                 if (this.battle.ended) {
-                    this.winnerText = this.battle.winner === 'player-1' ? 'VICTORY' : 'LOOSE';
+                    this.winnerText = this.battle.winner === 'attacker' ? 'VICTORY' : 'LOOSE';
                 } else {
                     this.battle.next();
                 }
@@ -320,11 +265,11 @@ class BattleVM {
 
     getTeam(player: string) {
         let res = [];
-        for (let k in battleView[player]) {
+        for (let k in this.battleView[player]) {
             res.push(
                 new ContestantVM(
                     this.battle.units[k],
-                    battleView[player][k],
+                    this.battleView[player][k],
                     this.battle.current && this.battle.current.id === k,
                     isTarget(this.selectedSkill, this.battle.current, this.battle.units[k]),
                     this.castSkillOn
@@ -338,7 +283,7 @@ class BattleVM {
         let u = this.battle.units[unitId];
         return new ContestantVM(
             u,
-            battleView[u.player][unitId],
+            this.battleView[u.player][unitId],
             this.battle.current && this.battle.current.id === unitId,
             isTarget(this.selectedSkill, this.battle.current, this.battle.units[unitId]),
             this.castSkillOn,
@@ -346,16 +291,39 @@ class BattleVM {
         );
     }
 
+    interpretEvent(e) {
+        const type = e.constructor.name;
+
+        switch (type) {
+            case 'BattleStarted':
+                return "Battle Started";
+            case 'Tick':
+                return null;
+            case 'GloryTowersApplied':
+                const { id, ...rest } = e;
+                if (Object.keys(rest).length > 0) {
+                    return `${e.constructor.name}: ${JSON.stringify(e, null, 2)}`;
+                }
+                return null;
+            case 'TurnStarted':
+                const player = this.battle.units[e.id].player;
+                const unit = this.battleView[player][e.id];
+                return `${unit.name} of ${player} starts turn`;
+            default:
+                return `${e.constructor.name}: ${JSON.stringify(e, null, 2)}`;
+        }
+    }
+
     get teamA() {
-        return this.getTeam(teamA.player);
+        return this.getTeam('attacker');
     }
 
     get teamB() {
-        return this.getTeam(teamB.player);
+        return this.getTeam('defender');
     }
 
     get log(): string[] {
-        return this._events.map(interpretEvent).filter(e => e);
+        return this._events.map(this.interpretEvent).filter(e => e);
     }
 }
 
@@ -734,7 +702,6 @@ class ContestantView extends HTMLElement {
         this.unit = unit;
         let pendingEvents = this.unit.events;
 
-        console.log('pendingEvents', pendingEvents[0], pendingEvents[1]);
         this.delta.innerHTML = '';
         pendingEvents.forEach((event, i) => {
             if (event.text) {
@@ -907,12 +874,14 @@ customElements.define('x-battle', GuildBattleView);
 
 const container = document.getElementById("battle");
 if (container) {
-    let battleVM = new BattleVM('some-id');
+    const urlParams = new URLSearchParams(window.location.search);
+    const battleId = urlParams.get('id');
+    let battleVM = new BattleVM(battleId);
     let battleView = new GuildBattleView(battleVM);
     container.appendChild(battleView);
     const log = document.getElementById('battle-log');
     battleVM.onChange(() => {
-        log.value = log.value + battleVM.log.join('\n');
+        log.value = [log.value, ...battleVM.log].join('\n');
         log.scrollTop = log.scrollHeight;
     });
 
@@ -924,5 +893,5 @@ if (container) {
         }
     });
 } else {
-    alert(`Container element with ID=${battle} missing in the DOM`)
+    alert(`Container element with ID="battle" missing in the DOM`)
 }
