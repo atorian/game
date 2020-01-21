@@ -6,11 +6,11 @@ function roll() {
 }
 
 GenericSkills.set(3602, {
-    target: targetEnemy,
     action: [
         step(
+            targetEnemy,
             simpleAtkDmg(roll, (atk) => atk * 3.6),
-            debuf(roll,'stun', 1, 15),
+            debuf(roll, 'stun', 1, 15),
         )
     ],
     meta: {

@@ -21,16 +21,12 @@ export const Elements = {
     },
 };
 
-type Targeter = (string, Contestant[]) => Unit[];
+type Targeter = (Contestant, string, Contestant[]) => Unit[];
 type BattleMechanic = (Contestant, Contestant, SkillMultipliers, HitContext) => HitContext;
-type SkillStep = (Contestant, Contestant, SkillMultipliers) => void;
+type SkillStep = (Contestant, string, Contestant[], SkillMultipliers) => void;
 
-export function targetEnemy(targetId: string, units: Contestant[]): Contestant[] {
-    return units.filter(u => u.id === targetId);
-}
 
 type SkillSpec = {
-    target: Targeter,
     action: SkillStep[],
     meta: SkillMeta,
 }
@@ -154,7 +150,7 @@ export function simpleAtkDmg(roll: rng, multiply: atkMultiplier = someMultiplier
         let critChance = critChanceOf(caster) - antiCritChanceOf(target);
         if (hasAdvantage) {
             critChance = Math.max(critChance + 15, 100);
-        } else if(hasDisadvantage) {
+        } else if (hasDisadvantage) {
             critChance = Math.min(critChance, 85);
         }
 
@@ -191,7 +187,21 @@ function kindOfDmg(hit: HitContext) {
     return 'normal'
 }
 
-export function step(...mechanics: BattleMechanic[]): SkillStep {
+export function targetEnemy(caster: Contestant, targetId: string, units: Contestant[]): Contestant[] {
+    return units.filter(u => u.id === targetId);
+}
+
+export function targetSelf(caster: Contestant, targetId: string, units: Contestant[]): Contestant[] {
+    return caster;
+}
+
+function multistep(steps: SkillStep[]): SkillStep {
+    return (caster: Contestant, target: string, units: Contestant[], meta: SkillMultipliers) => {
+        steps.forEach((stp) => stp(caster, target, units, meta));
+    }
+}
+
+function hit(mechanics: BattleMechanic[]) {
     return (caster: Contestant, target: Contestant, meta: SkillMultipliers) => {
         const hit: HitContext = mechanics.reduce((ctx: HitContext, m: BattleMechanic) => {
             return m(caster, target, meta, ctx);
@@ -203,10 +213,17 @@ export function step(...mechanics: BattleMechanic[]): SkillStep {
     }
 }
 
+export function step(target: Targeter, ...mechanics: BattleMechanic[]): SkillStep {
+    let combo = hit(mechanics);
+    return (caster: Contestant, targetId: string, units: Contestant[], meta: SkillMultipliers) => {
+        return target(caster, targetId, units).forEach(t => combo(caster, t, meta));
+    }
+}
+
 const dummySkill: SkillSpec = {
-    target: targetEnemy,
     action: [
         step(
+            targetEnemy,
             simpleAtkDmg(defaultRng),
         ),
     ],
@@ -221,31 +238,23 @@ export const GenericSkills: Map<number, SkillSpec> = new Map([
     [1, dummySkill],
 ]);
 
-function multistep(steps: SkillStep[]): SkillStep {
-    return (caster: Contestant, target: Contestant, meta: SkillMultipliers) => {
-        steps.forEach((m) => m(caster, target, meta));
-    }
-}
-
 export class GenericSkill implements Ability {
     id: number;
     multipliers: SkillMultipliers;
-    target: Targeter;
     apply: SkillStep;
     cooldown: number = 0;
     maxCooldown: number;
 
-    constructor(id: number, meta: SkillMeta, target: Targeter, apply: SkillStep) {
+    constructor(id: number, meta: SkillMeta, apply: SkillStep) {
         this.id = id;
         const { cooldown, ...multipliers } = meta;
         this.multipliers = multipliers;
         this.maxCooldown = cooldown;
-        this.target = target;
         this.apply = apply;
     }
 
     cast(caster: Contestant, target: string, units: Contestant[]): void {
-        this.target(target, units).forEach(t => this.apply(caster, t, this.multipliers));
+        this.apply(caster, target, units, this.multipliers);
         this.cooldown = this.maxCooldown;
     }
 
@@ -265,7 +274,6 @@ export function GetSkill(id: number): Ability {
         return new GenericSkill(
             id,
             spec.meta,
-            spec.target,
             multistep(spec.action),
         );
     }
