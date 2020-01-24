@@ -1,9 +1,10 @@
 const path = require('path');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
     entry: {
         battle: './webui/battle.js',
-        teams: './webui/make-teams.js'
+        teams: './webui/teams.js'
     },
     output: {
         filename: '[name].js',
@@ -16,6 +17,12 @@ module.exports = {
             { test: /\.m?js$/, use: 'babel-loader', exclude: /(node_modules|bower_components)/, }
         ]
     },
+    plugins: [
+        new CopyPlugin([
+            { from: './webui/*.html', to: '.', flatten: true },
+            { from: './webui/assets', to: './assets', flatten: true },
+        ]),
+    ],
     devtool: 'cheap-module-eval-source-map',
     devServer: {
         contentBase: path.join(__dirname, 'dist'),

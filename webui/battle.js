@@ -1,10 +1,10 @@
 // @flow
 import type { Unit } from "../src";
 import { FIRE } from "../src";
+import * as app from '../src/app';
 // import swunits from '../src/sw-units';
 import HpBar from './hp-bar';
 import AtkBar from './atk-bar';
-import * as app from '../src/app';
 
 customElements.define('x-hp-bar', HpBar);
 customElements.define('x-atb', AtkBar);
@@ -511,7 +511,7 @@ class ContestantView extends HTMLElement {
                     color: transparent;
                     filter: invert(1); 
                     display: block;
-                    background-image: url("./magic-circle.png");
+                    background-image: url("./assets/magic-circle.png");
                     background-repeat: no-repeat;
                     background-position: center;
                     background-size: cover;

@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "module",
   "private": true,
   "scripts": {
     "test": "mocha",
+    "prestart": "rm -rf ./dist",
     "start": "webpack-dev-server --host 0.0.0.0",
-    "prebuild": "rm -rf .dist",
+    "prebuild": "rm -rf ./dist",
     "build": "webpack",
     "flow": "flow"
   },
@@ -29,19 +29,20 @@
     "webpack-dev-server": "^3.9.0"
   },
   "devDependencies": {
-    "@babel/register": "^7.7.7",
     "@babel/cli": "^7.7.5",
     "@babel/core": "^7.7.5",
     "@babel/node": "^7.7.4",
     "@babel/plugin-proposal-class-properties": "^7.7.4",
     "@babel/preset-env": "^7.7.6",
     "@babel/preset-flow": "^7.7.4",
+    "@babel/register": "^7.7.7",
     "babel-loader": "^8.0.6",
     "chai": "^4.1.2",
     "chai-subset": "^1.6.0",
+    "copy-webpack-plugin": "^5.1.1",
     "flow-bin": "0.106.1",
     "mocha": "^5.2.0",
-    "webpack": "^4.41.2",
+    "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10"
   }
 }
