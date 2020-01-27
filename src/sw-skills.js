@@ -1,8 +1,8 @@
-import { GenericSkills, simpleAtkDmg, debuf, step, targetEnemy } from "./skills";
+import { debuf, GenericSkills, simpleAtkDmg, step, targetEnemy } from "./skills";
 import _ from 'lodash';
 
 function roll() {
-    return _.random(1, 100)
+    return _.random(1, 100);
 }
 
 GenericSkills.set(3602, {
@@ -17,5 +17,5 @@ GenericSkills.set(3602, {
         dmg: 30,
         effect: 35,
         cooldown: 0,
-    }
+    },
 });

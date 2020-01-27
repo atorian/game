@@ -220,6 +220,7 @@ class PreparationVM {
 
     removeUnit(team, idx) {
         const [slots] = this.getTeam(team);
+        console.log('removeUnit', team, slots, idx);
         slots[idx].next(null);
     }
 
@@ -270,7 +271,7 @@ class BattlePreparation extends HTMLElement {
         const team = container.dataset.team;
         this._vm.selectTeam(team);
 
-        if (event.target.tagName !== 'LI') {
+        if (event.target.tagName === 'IMG') {
             const li = event.target.parentNode;
             this._vm.removeUnit(team, li.dataset.slot);
         }
@@ -312,7 +313,7 @@ class BattlePreparation extends HTMLElement {
                     border: 2px solid #907434;
                     border-radius: 10px;
                     box-shadow: 0 0 10px #321B0A;
-                    background-image: url("./monster.jpg");
+                    background-image: url("./assets/monster.jpg");
                     background-size: cover;
                     background-position: center;
                     background-blend-mode: overlay;
@@ -793,7 +794,7 @@ class PresetsList extends HTMLElement {
                     border: 2px solid #907434;
                     border-radius: 10px;
                     box-shadow: 0 0 10px #321B0A;
-                    background-image: url("./monster.jpg");
+                    background-image: url("./assets/monster.jpg");
                     background-size: cover;
                     background-position: center;
                     background-blend-mode: overlay;

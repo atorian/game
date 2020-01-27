@@ -1,6 +1,4 @@
 import { WATER, FIRE, WIND, DARK, LIGHT } from "./index";
-import swkills from './sw-skills';
-
 
 export default {
   12302: {
