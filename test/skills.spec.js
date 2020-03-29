@@ -166,4 +166,6 @@ describe('debuf', () => {
             effectsAdded:[{name:'any-effect', duration:2}],
         });
     });
+
+    // todo: check HP destroy works and skills have it enabled
 });

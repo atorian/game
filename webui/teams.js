@@ -3,6 +3,8 @@ import { html, render } from 'lit-html';
 import classnames from 'classnames';
 import * as app from '../src/app';
 import { BehaviorSubject, combineLatest, merge } from "rxjs";
+import swunits from '../src/sw-units';
+
 
 type preset = {
     id?: string,
@@ -82,6 +84,7 @@ if (!presets.isPopulated) {
             id: uuid(),
             unitId: '12302',
             name: 'tanky tree',
+            img: 'https://swarfarm.com/static/herders/images/monsters/unit_icon_0010_2_1.png',
             hp: 15000,
             atk: 1000,
             def: 1000,
@@ -94,6 +97,7 @@ if (!presets.isPopulated) {
             id: uuid(),
             unitId: '12302',
             name: 'fast tree',
+            img: 'https://swarfarm.com/static/herders/images/monsters/unit_icon_0010_2_1.png',
             hp: 7000,
             atk: 1000,
             def: 1000,
@@ -102,7 +106,21 @@ if (!presets.isPopulated) {
             cd: 50,
             acc: 30,
             res: 15,
-        }
+        },
+        ...Object.values(swunits).map(u => ({
+            id: uuid(),
+            unitId: `${u.id}`,
+            name: u.name,
+            img: u.icon,
+            hp: u.hp,
+            atk: u.atk,
+            def: u.def,
+            spd: u.spd,
+            cr: u.cr,
+            cd: u.cd,
+            acc: u.acc,
+            res: u.res,
+        })),
     ];
 
     for (let p of defaultPresets) {
@@ -265,7 +283,7 @@ class BattlePreparation extends HTMLElement {
 
     onClick(event) {
         let container = event.target;
-        while(!container.dataset.team) {
+        while (!container.dataset.team) {
             container = container.parentNode;
         }
         const team = container.dataset.team;
@@ -365,8 +383,8 @@ class BattlePreparation extends HTMLElement {
                     @click=${this.onClick} data-team="defender">
                     <h4>Defending Team</h4>
                     <ul>${this._vm.defender.map((p, i) => {
-                        if (p !== null) {
-                            return html`<li data-slot="${i}" 
+            if (p !== null) {
+                return html`<li data-slot="${i}" 
                                     @contextmenu=${(e) => this.editPreset(e, 'defender', i)}
                                     class=${classnames({ selected: this._vm.isDefenderSelected && this._vm.currentSlot === i })} >
                                 <img src="${this._vm.defender[i].img || '#'}" 
@@ -374,26 +392,26 @@ class BattlePreparation extends HTMLElement {
                                  />
                                 <p>${this._vm.defender[i].name}</p>
                             </li>`;
-                        }
-                        return html`<li></li>`;
-                    })}</ul>
+            }
+            return html`<li></li>`;
+        })}</ul>
                 </div>
                 <div>VS</div>
                 <div class=${classnames({ panel: true, selected: this._vm.isAttackerSelected })} 
                     @click=${this.onClick} data-team="attacker">
                     <h4>Attacking Team</h4>
                     <ul>${this._vm.attacker.map((p, i) => {
-                        if (p !== null) {
-                            return html`<li data-slot="${i}" >
+            if (p !== null) {
+                return html`<li data-slot="${i}" >
                                 <img src="${this._vm.attacker[i].img || '#'}" 
                                     title="${this._vm.attacker[i].name}"
                                     @contextmenu=${(e) => this.editPreset(e, 'attacker', i)}
                                  />
                                 <p>${this._vm.attacker[i].name}</p>
                             </li>`;
-                        }
-                        return html`<li></li>`;
-                    })}</ul>
+            }
+            return html`<li></li>`;
+        })}</ul>
                     <button @click=${this._vm.startBattle}>Start</button>
                 </div>
             </div>
@@ -659,7 +677,6 @@ class Preset extends HTMLElement {
 
     set preset(data: preset) {
         this._preset = data;
-        this._preset.img = 'https://swarfarm.com/static/herders/images/monsters/unit_icon_0010_2_1.png';
         this.invalidate();
     }
 
@@ -780,6 +797,7 @@ class PresetsList extends HTMLElement {
                 ul {
                     display: flex;
                     justify-content: left;
+                    flex-wrap: wrap;
                     margin: 0;
                     padding: 0;
                 }

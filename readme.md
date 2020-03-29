@@ -4,4 +4,4 @@ Test it:
 
     npm start
 
-and goto http://localhost:9000/teams.html to try it.
+and goto http://localhost:9000 to try it.

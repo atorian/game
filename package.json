@@ -9,6 +9,10 @@
     "prestart": "rm -rf ./dist",
     "start": "webpack-dev-server --host 0.0.0.0",
     "prebuild": "rm -rf ./dist",
+    "skills": "babel-node ./src/swarfarm/skills.js",
+    "gen": "babel-node ./src/swarfarm/codegen.js",
+    "gen-units": "babel-node ./src/swarfarm/transform-units.js",
+    "list-skills": "babel-node ./src/sw-skills.js",
     "build": "webpack",
     "flow": "flow"
   },
