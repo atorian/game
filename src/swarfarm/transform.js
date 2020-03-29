@@ -1,47 +1,3 @@
-import { DARK, FIRE, LIGHT, WATER, WIND } from "../index";
-
-// const swarfarmUnits = require('../../data/units');
-
-function mapElement(strElement) {
-    switch (strElement) {
-        case 'fire':
-            return FIRE;
-        case 'wind':
-            return WIND;
-        case 'water':
-            return WATER;
-        case 'dark':
-            return DARK;
-        case 'light':
-            return LIGHT;
-        default:
-            throw new Error(`Unknown element ${strElement}`);
-    }
-}
-
-export function stats(unit) {
-    return {
-        id: unit.id,
-        element: mapElement(unit.element.toLowerCase()),
-        hp: unit.max_lvl_hp,
-        atk: unit.max_lvl_attack,
-        def: unit.max_lvl_defense,
-        spd: unit.speed,
-        cr: unit.crit_rate,
-        cd: unit.crit_damage,
-        acc: unit.accuracy,
-        res: unit.resistance,
-        skills: unit.skills
-    };
-}
-
-export function view(unit) {
-    return {
-        id: unit.id,
-        name: unit.name,
-        icon: `https://swarfarm.com/static/herders/images/monsters/${unit.image_filename}`,
-    };
-}
 
 
 function parseDmgMultiplier(rawMultipliers, meta) {
@@ -98,21 +54,6 @@ function parseDmgMultiplier(rawMultipliers, meta) {
                 if (!carry[k]) carry[k] = 0;
                 carry[k] += v;
             }
-
-            // return carry;
-
-            // if (el.dmg) {
-            //     carry.dmg += el.dmg;
-            // }
-            // if (el.effect) {
-            //     carry.effect += el.effect;
-            // }
-            // if (el.effect) {
-            //     carry.effect += el.effect;
-            // }
-            // if (el.cooldown) {
-            //     carry.cooldown += el.cooldown;
-            // }
             return carry;
         }, meta);
 }
@@ -364,10 +305,10 @@ export function parseMultipliers(rawMultipliers) {
                 opts[`${stat}${type2}`] = mod[4];
             }
         }
-
-        if (mod.includes('FIXED')) {
-            notes.push('Fixed dmg need manual handling');
-        }
+        //
+        // if (mod.includes('FIXED')) {
+        //     notes.push('Fixed dmg need manual handling');
+        // }
 
         return opts;
     }, {});
@@ -423,13 +364,6 @@ function findBomb(skill) {
 
 export function skill(skl) {
 
-    if (!(skl.effects && skl.effects.length)) {
-        return {
-            id: skl.id,
-            meta: { dmg: 0, effect: 0, cooldown: 0 },
-            steps: [],
-        };
-    }
     let notes = [];
     let dealsDmg = skl.description.includes('damage');
     let revive = skl.effects.find(e => e.effect.id === 36);
@@ -453,11 +387,23 @@ export function skill(skl) {
     if ((isHeal || revive) && !dealsDmg) {
         let mainEffect = skl.effects.find(el => el.effect.id === 35) || revive;
         if (skl.scales_with.length === 1 && skl.scales_with[0] === 'ATK') {
-            step.atkHeal = rawMultiplier[0][2];
+            if (revive) {
+                step.reviceAtkHeal = rawMultiplier[0][2];
+            } else {
+                step.atkHeal = rawMultiplier[0][2];
+            }
         } else if (skl.scales_with.length === 1 && skl.scales_with[0] === 'Target MAX HP') {
-            step.ratioHeal = mainEffect.quantity / 100;
+            if (revive) {
+                step.reviveRatioHeal = mainEffect.quantity / 100;
+            } else {
+                step.ratioHeal = mainEffect.quantity / 100;
+            }
         } else if (skl.scales_with.length === 0 || skl.scales_with.length === 1 && skl.scales_with[0] === 'MAX HP') {
-            step.ratioHeal = mainEffect.quantity / 100;
+            if (revive) {
+                step.reviveMyRatioHeal = mainEffect.quantity / 100;
+            } else {
+                step.myRatioHeal = mainEffect.quantity / 100;
+            }
         } else {
             notes.push('Cant parse heal multiplier');
         }
@@ -466,7 +412,7 @@ export function skill(skl) {
     if (shieldEffect) {
         if (skl.scales_with.length === 0 || skl.scales_with.length === 1 && skl.scales_with[0] === 'MAX HP') {
             step.shield = {
-                maxHpMultiplier: 1,
+                ...parseMultipliers(rawMultiplier),
                 duration: shieldEffect.quantity,
             };
         } else if (skl.scales_with.length === 1 && skl.scales_with[0] === 'ATK') {
@@ -600,7 +546,6 @@ export function skill(skl) {
             notes.push(e.message);
         }
 
-
     } else if(findBomb(skl) && skl.scales_with.length === 1 && skl.scales_with[0] !== 'ATK') {
         throw new NotImplementedError(`Invalid multiplier for bomb: ${skl.id}`);
     } else {
@@ -688,7 +633,7 @@ export function skill(skl) {
         description: skl.description,
         slot: skl.slot,
         icon: skl.icon_filename,
-        passive: skl.passive,
+        passive: skl.passive || skl.description.includes('[Automatic Effect]'),
         meta: parseDmgMultiplier(
             skl.level_progress_description,
             { dmg: 0, effect: 0, cooldown: parseInt(skl.cooltime, 10) || 0 }

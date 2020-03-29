@@ -2,39 +2,7 @@ import { assert } from 'chai';
 import * as transform from '../src/swarfarm/transform';
 import { parseMultipliers } from '../src/swarfarm/transform';
 import { FIRE } from "../src";
-import _ from 'lodash';
 
-function codegenSkill(skillData) {
-    let result = '{\n';
-    result += 'action: [\n';
-
-    for (let step of skillData.steps) {
-        result += 'step(\n';
-        if (step.target === 'enemy') {
-            result += 'targetEnemy,\n';
-        }
-        if (step.atkDmg) {
-            result += `simpleAtkDmg(roll, (atk) => atk * ${step.atkDmg.atkMultiplier}),\n`;
-        }
-        if (step.debuffs) {
-            for (let d of step.debuffs) {
-                result += `debuff(roll, '${d[0]}', ${d[1]}, ${d[2]}),\n`;
-            }
-        }
-
-        result += '),\n';
-    }
-
-    result += '],\n';
-    result += 'meta: {\n';
-    result += `dmg: ${skillData.meta.dmg},\n`;
-    result += `effect: ${skillData.meta.effect},\n`;
-    result += `cooldown: ${skillData.meta.cooldown}\n`;
-    result += '}\n';
-    result += '}';
-
-    return result;
-}
 
 describe('swarfarm adapter', () => {
 
@@ -287,34 +255,6 @@ describe('swarfarm adapter', () => {
             };
 
             assert.deepEqual(transform.skillEffect(effect), { buffs: ['endure', 1] });
-        });
-
-        it.skip('parses shield', () => {
-            const effect = {
-                "effect": {
-                    "id": 12,
-                    "url": "https://swarfarm.com/api/v2/skill-effects/12/",
-                    "name": "Shield",
-                    "is_buff": true,
-                    "description": "A shield is created to absorb a portion of incoming damage",
-                    "icon_filename": "buff_shield.png"
-                },
-                "aoe": false,
-                "single_target": false,
-                "self_effect": true,
-                "chance": null,
-                "on_crit": false,
-                "on_death": false,
-                "random": false,
-                "quantity": 3,
-                "all": false,
-                "self_hp": true,
-                "target_hp": false,
-                "damage": false,
-                "note": ""
-            };
-
-            assert.deepEqual(transform.skillEffect(effect), { shield: null });
         });
     });
 
@@ -819,22 +759,6 @@ describe('swarfarm adapter', () => {
                 cooldown: 0,
             }
         });
-
-        const code = codegenSkill(transformed);
-        assert.equal(`{
-action: [
-step(
-targetEnemy,
-simpleAtkDmg(roll, (atk) => atk * 3.6),
-debuff(roll, 'stun', 1, 15),
-),
-],
-meta: {
-dmg: 30,
-effect: 35,
-cooldown: 0
-}
-}`, code);
     });
 
     it('attacking skill with provoke', () => {
@@ -1605,7 +1529,7 @@ cooldown: 0
         });
     });
 
-    it('attacking skill with additional DMG per debuf', () => {
+    it('attacking skill with additional DMG per debuff', () => {
         // todo: revisit this - amount of hits is not fixed to 6
         const skill = {
             "id": 68,
@@ -3508,7 +3432,7 @@ cooldown: 0
             steps: [
                 {
                     target: "ally",
-                    ratioHeal: 0.4,
+                    reviveRatioHeal: 0.4,
                     buffs: [
                         ['soul_protect', 3],
                     ],
@@ -3604,9 +3528,7 @@ cooldown: 0
                     transform.skill(skill);
                     parsed++;
                 } catch (e) {
-                    if (e.message === 'Cannot read property \'0\' of undefined') {
-                        console.error(e);
-                    }
+                    console.error(e);
                     errors[e.message] = errors[e.message] || {
                         error: e.message,
                         skills: []
