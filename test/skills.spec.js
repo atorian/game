@@ -4,7 +4,7 @@ import { before } from 'mocha'
 import { DARK, FIRE, LIGHT, WATER, WIND } from '../src';
 import { Elements, GenericSkill, simpleAtkDmg, step, targetEnemy, debuf } from '../src/skills';
 import Contestant from '../src/contestant';
-import { Battle } from '../src/battle';
+import Battle from '../src/battle';
 
 describe('Element Advantage', () => {
     it('fire has advantage over wind', () => {
@@ -79,8 +79,8 @@ describe('Generic Skill', () => {
                 effect: 0.35,
                 cooldown: 0,
             },
-            targetEnemy,
             step(
+                targetEnemy,
                 simpleAtkDmg(() => 1),
                 debuf(()=>100,'stun', 2),
             ),
@@ -122,7 +122,7 @@ describe('Generic Skill', () => {
 
         skill.cast(caster, 'target-id', [caster, target]);
 
-        assert.deepEqual(battle.units['target-id'].currentHP, 759);
+        assert.deepEqual(battle.units['target-id'].currentHP, 579);
         assert.deepEqual(battle.units['target-id'].effects.elements, [{name: 'stun', duration: 2}]);
     });
 });
@@ -160,11 +160,12 @@ describe('debuf', () => {
 
     it('adds effect', () => {
         const mechanic = debuf(() => 100, 'any-effect', 2);
-        let ctx = { effects: [], resisted: [] };
+        let ctx = { effectsAdded:[] };
 
         assert.deepEqual(mechanic(caster, target, { effect: 0, dmg: 0 }, ctx), {
-            effects:[{name:'any-effect', duration:2}],
-            resisted: [],
+            effectsAdded:[{name:'any-effect', duration:2}],
         });
     });
+
+    // todo: check HP destroy works and skills have it enabled
 });

@@ -121,11 +121,15 @@ function normalDmg(rawDmg: number, multipliers: SkillMultipliers): number {
 
 type atkMultiplier = (number) => number;
 
+
+type dmgMultiplier = (attacker: Contestant, target: Contestant) => number;
+
+
 function someMultiplier(atk) {
     return atk * 3.3 + 35;
 }
 
-export function debuf(roll: rng, effectName: string, duration: number, baseChance: number = 100): BattleMechanic {
+export function debuff(roll: rng, effectName: string, duration: number, baseChance: number = 100): BattleMechanic {
     return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
         const activationChance = baseChance + multipliers.effect;
         if (!ctx.isGlance && roll() <= activationChance) {
@@ -135,6 +139,98 @@ export function debuf(roll: rng, effectName: string, duration: number, baseChanc
                 ctx.resisted.push({ name: effectName });
             }
         }
+        return ctx;
+    }
+}
+
+
+
+
+export function buff(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function atbDecrease(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+export function atbIncrease(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function additionalTurn(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+export function groupAttack(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function strip(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function skillRefresh(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function heal(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function simpleDmgWithoutDmgReduction(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function simpleDmgWithDefIgnore(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function onKill(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function fixedDmg(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
+        return ctx;
+    }
+}
+
+export function cleanse(): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        // fixme
         return ctx;
     }
 }
@@ -180,6 +276,47 @@ export function simpleAtkDmg(roll: rng, multiply: atkMultiplier = someMultiplier
     }
 }
 
+export function simpleDmg(roll: rng, multiply: dmgMultiplier): BattleMechanic {
+    return function (caster: Contestant, target: Contestant, multipliers: SkillMultipliers, ctx: HitContext): HitContext {
+        const rawDmg = multiply(caster, target);
+        const advMod = elementAdvMod(caster, target);
+        const glancingChance = glanceChanceOf(caster) + advMod;
+        const hasAdvantage = Elements.hasAdvantage(caster, target);
+        const hasDisadvantage = Elements.hasDisadvantage(caster, target);
+
+        let critChance = critChanceOf(caster) - antiCritChanceOf(target);
+        if (hasAdvantage) {
+            critChance = Math.max(critChance + 15, 100);
+        } else if (hasDisadvantage) {
+            critChance = Math.min(critChance, 85);
+        }
+
+        let isCrit = false, isGlance = false, isCrush = false, dmg;
+
+        const n = roll();
+        if (n <= glancingChance) { // glance
+            isGlance = true;
+            dmg = glancedDmg(rawDmg, caster, target);
+        } else if (n <= critChance) { // crit
+            isCrit = true;
+            dmg = critDmg(rawDmg, multipliers, caster.cd);
+        } else if (n <= advMod) { // crush
+            isCrush = true;
+            dmg = crashedDmg(rawDmg, multipliers);
+        } else { // normal
+            dmg = normalDmg(rawDmg, multipliers);
+        }
+
+        return {
+            ...ctx,
+            isCrit,
+            isGlance,
+            isCrush,
+            dmg: Math.round(dmg * dmgReducton(target) * randomDmgMultiplier(roll)),
+        };
+    }
+}
+
 function kindOfDmg(hit: HitContext) {
     if (hit.isCrit) return 'crit';
     if (hit.isCrush) return 'crushing';
@@ -191,11 +328,23 @@ export function targetEnemy(caster: Contestant, targetId: string, units: Contest
     return units.filter(u => u.id === targetId);
 }
 
+export function targetEnemies(caster: Contestant, targetId: string, units: Contestant[]): Contestant[] {
+    return units.filter(u => u.player !== caster.player);
+}
+
+export function targetAllies(caster: Contestant, targetId: string, units: Contestant[]): Contestant[] {
+    return units.filter(u => u.player === caster.player);
+}
+
 export function targetSelf(caster: Contestant, targetId: string, units: Contestant[]): Contestant[] {
     return caster;
 }
+export function targetAlly(caster: Contestant, targetId: string, units: Contestant[]): Contestant[] {
+    // fixme: check team
+    return units.filter(u => u.id === targetId);
+}
 
-function multistep(steps: SkillStep[]): SkillStep {
+export function multistep(steps: SkillStep[]): SkillStep {
     return (caster: Contestant, target: string, units: Contestant[], meta: SkillMultipliers) => {
         steps.forEach((stp) => stp(caster, target, units, meta));
     }
@@ -220,22 +369,25 @@ export function step(target: Targeter, ...mechanics: BattleMechanic[]): SkillSte
     }
 }
 
-const dummySkill: SkillSpec = {
-    action: [
-        step(
-            targetEnemy,
-            simpleAtkDmg(defaultRng),
-        ),
-    ],
-    meta: {
-        dmg: 0.3,
-        effect: 0.35,
-        cooldown: 0,
-    }
-};
+function newDummySkill(roll) {
+    const dummySkill: SkillSpec = {
+        action: [
+            step(
+                targetEnemy,
+                simpleAtkDmg(roll),
+            ),
+        ],
+        meta: {
+            dmg: 0.3,
+            effect: 0.35,
+            cooldown: 0,
+        }
+    };
+    return new GenericSkill(1, dummySkill.meta, multistep(dummySkill.action))
+}
 
-export const GenericSkills: Map<number, SkillSpec> = new Map([
-    [1, dummySkill],
+export const GenericSkills: Map<number, (() => number) => Ability> = new Map([
+    [1, newDummySkill],
 ]);
 
 export class GenericSkill implements Ability {
@@ -267,15 +419,11 @@ export class GenericSkill implements Ability {
     }
 }
 
-
 export function GetSkill(id: number): Ability {
-    let spec: ?SkillSpec = GenericSkills.get(id);
-    if (spec) {
-        return new GenericSkill(
-            id,
-            spec.meta,
-            multistep(spec.action),
-        );
+    if (GenericSkills.has(id)) {
+        let factory = GenericSkills.get(id);
+        if (!factory) { return }
+        return factory(defaultRng);
     }
 
     throw new Error(`Unknown skill: ${id}`)

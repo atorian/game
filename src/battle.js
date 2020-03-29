@@ -8,7 +8,7 @@ import Contestant, {
     TurnEnded,
     UnitDied,
 } from "./contestant";
-import { GetSkill } from "./skills";
+import { GetSkill } from "./skill";
 import type { Unit } from "./index";
 import { GloryTowers, GuildFlags } from "./towers";
 

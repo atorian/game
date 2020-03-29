@@ -3,6 +3,7 @@ import uuid from "uuid/v4";
 import type { OwnedUnit, Unit } from "../index";
 import Battle from "../battle";
 import swunits from '../sw-units';
+require('../sw-skills');
 
 function playerTeam(units: Unit[], player): OwnedUnit {
     console.log('Object.keys(units).length', Object.keys(units).length);

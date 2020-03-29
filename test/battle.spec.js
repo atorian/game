@@ -1,4 +1,4 @@
-import { Battle } from "../src/battle";
+import Battle from "../src/battle";
 
 const chai = require('chai');
 const chaiSubset = require('chai-subset');
