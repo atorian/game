@@ -23,7 +23,7 @@
     "@vaadin/router": "^1.5.2",
     "classnames": "^2.2.6",
     "express": "^4.17.1",
-    "got": "^10.3.0",
+    "got": "^11.8.5",
     "lit-element": "^2.2.1",
     "lit-html": "^1.1.2",
     "lodash": "^4.17.15",
